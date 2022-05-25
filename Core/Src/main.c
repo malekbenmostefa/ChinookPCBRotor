@@ -23,6 +23,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include "chinook_can_ids.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
