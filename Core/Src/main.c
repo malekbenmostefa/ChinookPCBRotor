@@ -70,12 +70,23 @@ SD_HandleTypeDef hsd;
 
 SPI_HandleTypeDef hspi2;
 
+TIM_HandleTypeDef htim3;
+
 UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
 uint32_t current_state = STATE_INIT;
+SensorData sensor_data;
+uint32_t wheel_rpm_counter;
+uint32_t rotor_rpm_counter;
+uint32_t rpm_counter_time;
+
+//Wheter station variable
+uint8_t rx_buff[64];
+uint8_t index_buff;
+uint8_t ws_receive_flag;
 
 /* USER CODE END PV */
 
@@ -90,6 +101,7 @@ static void MX_SDIO_SD_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_UART5_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 void ExecuteStateMachine();
@@ -161,6 +173,9 @@ void ExecuteStateMachine()
 
 uint32_t DoStateInit()
 {
+	wheel_rpm_counter = 0;
+	rotor_rpm_counter = 0;
+	rpm_counter_time = 0;
 	return STATE_ACQUISITION;
 }
 
@@ -246,6 +261,7 @@ int main(void)
   MX_SPI2_Init();
   MX_UART5_Init();
   MX_USART2_UART_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
   current_state = STATE_INIT;
@@ -263,7 +279,7 @@ int main(void)
 
 	  // TODO: (Marc) Better to do a proper timer for better resolution
 	  HAL_Delay(5);
-	  /* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
@@ -548,6 +564,51 @@ static void MX_SPI2_Init(void)
 }
 
 /**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 480;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 20000;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+
+}
+
+/**
   * @brief UART5 Initialization Function
   * @param None
   * @retval None
@@ -563,7 +624,7 @@ static void MX_UART5_Init(void)
 
   /* USER CODE END UART5_Init 1 */
   huart5.Instance = UART5;
-  huart5.Init.BaudRate = 115200;
+  huart5.Init.BaudRate = 4800;
   huart5.Init.WordLength = UART_WORDLENGTH_8B;
   huart5.Init.StopBits = UART_STOPBITS_1;
   huart5.Init.Parity = UART_PARITY_NONE;
@@ -733,7 +794,34 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+// EXTI Line External Interrupt ISR Handler CallBack
 
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    if(GPIO_Pin == GPIO_PIN_14) // PD_14
+    {
+        // LED4
+        //gpio0_gp0 = (gpio0_gp0 ^ (1 << 5));
+        //GPIO_SendI2C(GPIO0_ADDR, GPIO_GP0, gpio0_gp0);
+        ToggleLed(LED1);
+    }
+    else if (GPIO_Pin == GPIO_PIN_15) // PD_15
+    {
+        // LED3
+        //gpio0_gp0 = (gpio0_gp0 ^ (1 << 6));
+        //GPIO_SendI2C(GPIO0_ADDR, GPIO_GP0, gpio0_gp0);
+        ToggleLed(LED2);
+    }
+    else if (GPIO_Pin == GPIO_PIN_0) // Rotor RPM
+    {
+    	rotor_rpm_counter++;
+    }
+    else if (GPIO_Pin == GPIO_PIN_1) // Wheel RPM
+    {
+    	wheel_rpm_counter++;
+    }
+
+}
 /* USER CODE END 4 */
 
 /**

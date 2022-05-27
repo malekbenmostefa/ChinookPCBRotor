@@ -54,7 +54,28 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+typedef struct SensorData_{
+	float wheel_rpm;
+	float rotor_rpm;
+	float torque;
+	float load_cell;
+	float wind_direction;
+	float wind_speed;
+	uint32_t pitch_encoder;
+	uint8_t limit_1, limit_2;
+	uint32_t mast_encoder;
+}SensorData;
 
+extern SensorData sensor_data;
+
+extern uint32_t wheel_rpm_counter;
+extern uint32_t rotor_rpm_counter;
+extern uint32_t rpm_counter_time;
+
+//Wheter station variable
+extern uint8_t rx_buff[64];
+extern uint8_t index_buff;
+extern uint8_t ws_receive_flag;
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
