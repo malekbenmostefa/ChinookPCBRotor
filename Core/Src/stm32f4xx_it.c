@@ -57,6 +57,7 @@
 
 /* External variables --------------------------------------------------------*/
 extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim5;
 extern UART_HandleTypeDef huart5;
 /* USER CODE BEGIN EV */
 
@@ -208,7 +209,7 @@ void EXTI0_IRQHandler(void)
   /* USER CODE BEGIN EXTI0_IRQn 0 */
 
   /* USER CODE END EXTI0_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(Rotor_RPM_Pin);
+  HAL_GPIO_EXTI_IRQHandler(TorqueADC_Pin);
   /* USER CODE BEGIN EXTI0_IRQn 1 */
 
   /* USER CODE END EXTI0_IRQn 1 */
@@ -222,7 +223,7 @@ void EXTI1_IRQHandler(void)
   /* USER CODE BEGIN EXTI1_IRQn 0 */
 
   /* USER CODE END EXTI1_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(Wheel_RPM_Pin);
+  HAL_GPIO_EXTI_IRQHandler(LoadcellADC_Pin);
   /* USER CODE BEGIN EXTI1_IRQn 1 */
 
   /* USER CODE END EXTI1_IRQn 1 */
@@ -286,11 +287,27 @@ void EXTI15_10_IRQHandler(void)
 
   /* USER CODE END EXTI15_10_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(LORA_INT_Pin);
-  HAL_GPIO_EXTI_IRQHandler(PB2_Pin);
+  HAL_GPIO_EXTI_IRQHandler(LORA_CS_Pin);
   HAL_GPIO_EXTI_IRQHandler(PB1_Pin);
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
 
   /* USER CODE END EXTI15_10_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM5 global interrupt.
+  */
+void TIM5_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM5_IRQn 0 */
+
+  /* USER CODE END TIM5_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim5);
+  /* USER CODE BEGIN TIM5_IRQn 1 */
+
+  timer_100ms_flag = 1;
+
+  /* USER CODE END TIM5_IRQn 1 */
 }
 
 /**
@@ -301,8 +318,8 @@ void UART5_IRQHandler(void)
   /* USER CODE BEGIN UART5_IRQn 0 */
 
 	//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-		if ((UART5->ISR & UART_IT_RXNE)) {
-			uint8_t rbyte = huart5.Instance->RDR;
+		if ((UART5->SR & UART_IT_RXNE)) {
+			uint8_t rbyte = huart5.Instance->DR;
 			rx_buff[index_buff] = rbyte;
 			index_buff++;
 			if(rbyte == '$')
@@ -312,7 +329,7 @@ void UART5_IRQHandler(void)
 			//__HAL_UART_SEND_REQ(&huart4, UART_RXDATA_FLUSH_REQUEST);
 			//__HAL_UART_ENABLE_IT(&huart4,UART_IT_RXNE);
 		}
-		if (UART5->ISR & UART_IT_ORE)
+		// if (UART5->SR & USART_SR_ORE)
 		{
 		  //__HAL_UART_SEND_REQ(&huart4, UART_RXDATA_FLUSH_REQUEST);
 		  //__HAL_UART_ENABLE_IT(&huart4,UART_IT_ORE);

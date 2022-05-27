@@ -62,8 +62,8 @@ typedef struct SensorData_{
 	float wind_direction;
 	float wind_speed;
 	uint32_t pitch_encoder;
-	uint8_t limit_1, limit_2;
 	uint32_t mast_encoder;
+	uint8_t limit1, limit2;
 }SensorData;
 
 extern SensorData sensor_data;
@@ -76,6 +76,9 @@ extern uint32_t rpm_counter_time;
 extern uint8_t rx_buff[64];
 extern uint8_t index_buff;
 extern uint8_t ws_receive_flag;
+
+extern uint8_t timer_100ms_flag;
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

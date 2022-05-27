@@ -23,6 +23,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "chinook_can_ids.h"
 
 /* USER CODE END Includes */
@@ -71,6 +75,7 @@ SD_HandleTypeDef hsd;
 SPI_HandleTypeDef hspi2;
 
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim5;
 
 UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart2;
@@ -88,6 +93,10 @@ uint8_t rx_buff[64];
 uint8_t index_buff;
 uint8_t ws_receive_flag;
 
+uint8_t aRxBuffer[256];
+
+uint8_t timer_100ms_flag;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,6 +111,7 @@ static void MX_SPI2_Init(void);
 static void MX_UART5_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_TIM5_Init(void);
 /* USER CODE BEGIN PFP */
 
 void ExecuteStateMachine();
@@ -116,6 +126,10 @@ uint32_t DoStateDataLogging();
 uint32_t DoStateUartTx();
 
 void DoStateError();
+
+
+uint32_t ReadPitchEncoder();
+uint32_t ReadMastEncoder();
 
 
 /* USER CODE END PFP */
@@ -176,11 +190,99 @@ uint32_t DoStateInit()
 	wheel_rpm_counter = 0;
 	rotor_rpm_counter = 0;
 	rpm_counter_time = 0;
+
+	index_buff = 0;
+	ws_receive_flag = 0;
+
+	timer_100ms_flag = 0;
+
 	return STATE_ACQUISITION;
 }
 
 uint32_t DoStateAcquisition()
 {
+	if (ws_receive_flag)
+	{
+		static char frame_begin[] = "$IIMWV";
+
+		// static int Led_Toggle=0;
+		// HAL_GPIO_WritePin(LD1_GPIO_Port,LD1_Pin,Led_Toggle);
+		// Led_Toggle=!Led_Toggle;
+
+		__disable_irq();
+
+		ws_receive_flag = 0;
+		index_buff = 0;
+
+		static uint8_t ws_message[64] = {0};
+		memcpy(ws_message, rx_buff, sizeof(ws_message));
+
+		__enable_irq();
+
+		if (strlen((char*)ws_message) >= 6)
+		{
+			char begin_frame[7]={0};
+			memcpy(begin_frame, ws_message, 6);
+			if (0 == strcmp(begin_frame, frame_begin))
+			{
+				char wind_dir_msg[6] = {0};
+				char wind_speed_msg[6] = {0};
+
+				memcpy(wind_dir_msg, &ws_message[7], 5);
+				memcpy(wind_speed_msg, &ws_message[15], 5);
+
+				float wind_dir = atof(wind_dir_msg);
+				float wind_speed = atof(wind_speed_msg);
+
+				sensor_data.wind_direction = wind_dir;
+				sensor_data.wind_speed = wind_speed;
+			}
+		}
+
+		// HAL_UART_Transmit(&huart3,ws_message,sizeof(ws_message),10);
+				  /*if (strlen((char*)ws_message) >= 6){
+
+					  uint8_t begin_frame[7]={0};
+					  memcpy(begin_frame,ws_message,6);
+
+					 		  if (0 ==strcmp(begin_frame,frame_begin))
+					 		  {
+
+					 			  HAL_UART_Transmit(&huart3,ws_message,sizeof(ws_message),10);
+
+					 		  }
+				  }*/
+
+
+				  /*
+				  static uint8_t ws_message[64];
+				  memcpy(ws_message,rx_buff,sizeof(ws_message));
+
+				  //char vitesse[7]="";
+				  char begin_tram[6]="";
+				  memcpy(begin_tram,ws_message,sizeof(begin_tram));
+				  begin_tram[5]=0;
+				  if(!strcmp(frame_begin,begin_tram)){
+					  //memcpy(vitesse,ws_message,sizeof(ws_message));
+					  //vitesse[10]=ws_message;
+					  //HAL_UART_Transmit(&huart3,vitesse,sizeof(vitesse),10);
+					  HAL_UART_Transmit(&huart3,ws_message,sizeof(ws_message),10);
+
+				  }
+				  */
+	}
+
+	if (timer_100ms_flag == 1)
+	{
+		timer_100ms_flag = 0;
+		sensor_data.pitch_encoder = ReadPitchEncoder();
+		sensor_data.mast_encoder = ReadMastEncoder();
+	}
+
+	// TODO: (Marc) Besoin de mutex ?
+	sensor_data.limit1 = HAL_GPIO_ReadPin(LIMIT1_GPIO_Port, LIMIT1_Pin);
+	sensor_data.limit2 = HAL_GPIO_ReadPin(LIMIT2_GPIO_Port, LIMIT2_Pin);
+
 	return STATE_CHECK_ROPS;
 }
 
@@ -223,6 +325,29 @@ void DoStateError()
 	Error_Handler();
 }
 
+
+uint32_t ReadPitchEncoder()
+{
+	uint32_t pitch_data = 0;
+	for(int i = 0; i < 22; ++i)
+	{
+		pitch_data <<= 1;
+		HAL_GPIO_WritePin(Pitch_Clock_GPIO_Port, Pitch_Clock_Pin, GPIO_PIN_RESET);
+		for (int i = 0; i < 2000; ++i) {} // Wait 10 us
+		HAL_GPIO_WritePin(Pitch_Clock_GPIO_Port, Pitch_Clock_Pin, GPIO_PIN_SET);
+		for (int i = 0; i < 2000; ++i) {} // Wait 10 us
+		pitch_data |= HAL_GPIO_ReadPin(Pitch_Data_GPIO_Port, Pitch_Data_Pin);
+	}
+
+	return pitch_data;
+}
+
+uint32_t ReadMastEncoder()
+{
+	// TODO: (Marc) Read Mast encoder (12 bits or 14 bits ?)
+	return 0;
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -262,7 +387,9 @@ int main(void)
   MX_UART5_Init();
   MX_USART2_UART_Init();
   MX_TIM3_Init();
+  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
+  HAL_UART_Receive_IT(&huart5, (uint8_t *)aRxBuffer, sizeof(aRxBuffer));
 
   current_state = STATE_INIT;
 
@@ -609,6 +736,51 @@ static void MX_TIM3_Init(void)
 }
 
 /**
+  * @brief TIM5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM5_Init(void)
+{
+
+  /* USER CODE BEGIN TIM5_Init 0 */
+
+  /* USER CODE END TIM5_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM5_Init 1 */
+
+  /* USER CODE END TIM5_Init 1 */
+  htim5.Instance = TIM5;
+  htim5.Init.Prescaler = 480;
+  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim5.Init.Period = 10000;
+  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM5_Init 2 */
+
+  /* USER CODE END TIM5_Init 2 */
+
+}
+
+/**
   * @brief UART5 Initialization Function
   * @param None
   * @retval None
@@ -803,14 +975,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         // LED4
         //gpio0_gp0 = (gpio0_gp0 ^ (1 << 5));
         //GPIO_SendI2C(GPIO0_ADDR, GPIO_GP0, gpio0_gp0);
-        ToggleLed(LED1);
+        //ToggleLed(LED1);
     }
     else if (GPIO_Pin == GPIO_PIN_15) // PD_15
     {
         // LED3
         //gpio0_gp0 = (gpio0_gp0 ^ (1 << 6));
         //GPIO_SendI2C(GPIO0_ADDR, GPIO_GP0, gpio0_gp0);
-        ToggleLed(LED2);
+        //ToggleLed(LED2);
     }
     else if (GPIO_Pin == GPIO_PIN_0) // Rotor RPM
     {
@@ -819,6 +991,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     else if (GPIO_Pin == GPIO_PIN_1) // Wheel RPM
     {
     	wheel_rpm_counter++;
+    }
+    else if (GPIO_Pin == GPIO_PIN_3) // Limit 1
+    {
+    	sensor_data.limit1 = 1;
+    }
+    else if (GPIO_Pin == GPIO_PIN_4) // Limit 2
+    {
+    	sensor_data.limit2 = 1;
     }
 
 }
