@@ -34,6 +34,23 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+enum STATES
+{
+	STATE_INIT = 0,
+	STATE_ACQUISITION,
+	STATE_CHECK_ROPS,
+	STATE_MOTOR_CONTROL,
+	STATE_CAN,
+	STATE_DATA_LOGGING,
+	STATE_UART_TX,
+
+	STATE_ROPS,
+
+	STATE_ERROR = 0xFF
+
+};
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -58,6 +75,8 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
+uint32_t current_state = STATE_INIT;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -73,10 +92,121 @@ static void MX_UART5_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
+void ExecuteStateMachine();
+
+uint32_t DoStateInit();
+uint32_t DoStateAcquisition();
+uint32_t DoStateCheckROPS();
+uint32_t DoStateMotorControl();
+uint32_t DoStateROPS();
+uint32_t DoStateCan();
+uint32_t DoStateDataLogging();
+uint32_t DoStateUartTx();
+
+void DoStateError();
+
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+void ExecuteStateMachine()
+{
+	switch (current_state)
+	{
+	case STATE_INIT:
+		current_state = DoStateInit();
+		break;
+
+	case STATE_ACQUISITION:
+		current_state = DoStateAcquisition();
+		break;
+
+	case STATE_CHECK_ROPS:
+		current_state = DoStateCheckROPS();
+		break;
+
+	case STATE_ROPS:
+		current_state = DoStateROPS();
+		break;
+
+	case STATE_MOTOR_CONTROL:
+		current_state = DoStateMotorControl();
+		break;
+
+	case STATE_CAN:
+		current_state = DoStateCan();
+		break;
+
+	case STATE_DATA_LOGGING:
+		current_state = DoStateDataLogging();
+		break;
+
+	case STATE_UART_TX:
+		current_state = DoStateUartTx();
+		break;
+
+	case STATE_ERROR:
+		DoStateError();
+		// In case we get out of error handling, restart
+		current_state = DoStateInit();
+		break;
+
+	default:
+		current_state = DoStateInit();
+		break;
+	};
+}
+
+uint32_t DoStateInit()
+{
+	return STATE_ACQUISITION;
+}
+
+uint32_t DoStateAcquisition()
+{
+	return STATE_CHECK_ROPS;
+}
+
+uint32_t DoStateCheckROPS()
+{
+	uint8_t rops = 0;
+	if (rops)
+		return STATE_ROPS;
+	else
+		return STATE_MOTOR_CONTROL;
+}
+
+uint32_t DoStateMotorControl()
+{
+	return STATE_CAN;
+}
+
+uint32_t DoStateROPS()
+{
+	return STATE_CAN;
+}
+
+uint32_t DoStateCan()
+{
+	return STATE_DATA_LOGGING;
+}
+
+uint32_t DoStateDataLogging()
+{
+	return STATE_UART_TX;
+}
+
+uint32_t DoStateUartTx()
+{
+	return STATE_ACQUISITION;
+}
+
+void DoStateError()
+{
+	Error_Handler();
+}
 
 /* USER CODE END 0 */
 
@@ -118,13 +248,22 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  current_state = STATE_INIT;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
+	  ExecuteStateMachine();
+
+	  // Alive blinking led
+	  // TODO: (Marc) Timer for blinking alive led
+
+	  // TODO: (Marc) Better to do a proper timer for better resolution
+	  HAL_Delay(5);
+	  /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
