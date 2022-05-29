@@ -83,12 +83,14 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 
 uint32_t current_state = STATE_INIT;
+
 SensorData sensor_data;
+
 uint32_t wheel_rpm_counter;
 uint32_t rotor_rpm_counter;
 uint32_t rpm_counter_time;
 
-//Wheter station variable
+// Weather station
 uint8_t rx_buff[64];
 uint8_t index_buff;
 uint8_t ws_receive_flag;

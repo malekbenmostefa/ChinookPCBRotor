@@ -72,7 +72,7 @@ extern uint32_t wheel_rpm_counter;
 extern uint32_t rotor_rpm_counter;
 extern uint32_t rpm_counter_time;
 
-//Wheter station variable
+// Weather station
 extern uint8_t rx_buff[64];
 extern uint8_t index_buff;
 extern uint8_t ws_receive_flag;
