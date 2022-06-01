@@ -56,7 +56,9 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim5;
 extern UART_HandleTypeDef huart5;
 /* USER CODE BEGIN EV */
@@ -258,6 +260,22 @@ void EXTI4_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles TIM2 global interrupt.
+  */
+void TIM2_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM2_IRQn 0 */
+
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
+
+  timer_50ms_flag = 1;
+
+  /* USER CODE END TIM2_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM3 global interrupt.
   */
 void TIM3_IRQHandler(void)
@@ -267,15 +285,31 @@ void TIM3_IRQHandler(void)
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);
   /* USER CODE BEGIN TIM3_IRQn 1 */
-  sensor_data.wheel_rpm = (((float)wheel_rpm_counter / 0.2f)/48.0f)*60.0f;
-  sensor_data.rotor_rpm = (((float)rotor_rpm_counter/ 0.2f)/360.0f)*60.0f;
+  // sensor_data.wheel_rpm = (((float)wheel_rpm_counter / 0.2f)/48.0f)*60.0f;
+  // sensor_data.rotor_rpm = (((float)rotor_rpm_counter/ 0.2f)/360.0f)*60.0f;
 
 
 
-  wheel_rpm_counter = 0;
-  rotor_rpm_counter = 0;
+  //wheel_rpm_counter = 0;
+  //rotor_rpm_counter = 0;
 
   /* USER CODE END TIM3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM4 global interrupt.
+  */
+void TIM4_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM4_IRQn 0 */
+
+  /* USER CODE END TIM4_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim4);
+  /* USER CODE BEGIN TIM4_IRQn 1 */
+
+  timer_500ms_flag = 1;
+
+  /* USER CODE END TIM4_IRQn 1 */
 }
 
 /**
@@ -317,28 +351,36 @@ void UART5_IRQHandler(void)
 {
   /* USER CODE BEGIN UART5_IRQn 0 */
 
-	//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-		if ((UART5->SR & UART_IT_RXNE)) {
-			uint8_t rbyte = huart5.Instance->DR;
-			rx_buff[index_buff] = rbyte;
-			index_buff++;
-			if(rbyte == '$')
-			{
-				ws_receive_flag = 1;
-			}
-			//__HAL_UART_SEND_REQ(&huart4, UART_RXDATA_FLUSH_REQUEST);
-			//__HAL_UART_ENABLE_IT(&huart4,UART_IT_RXNE);
-		}
-		// if (UART5->SR & USART_SR_ORE)
-		{
-		  //__HAL_UART_SEND_REQ(&huart4, UART_RXDATA_FLUSH_REQUEST);
-		  //__HAL_UART_ENABLE_IT(&huart4,UART_IT_ORE);
-		}
+
 
   /* USER CODE END UART5_IRQn 0 */
   HAL_UART_IRQHandler(&huart5);
   /* USER CODE BEGIN UART5_IRQn 1 */
+/*
+  HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
 
+  	//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+  		if ((UART5->SR & UART_IT_RXNE)) {
+  			uint8_t rbyte = huart5.Instance->DR;
+  			rx_buff[index_buff] = rbyte;
+  			index_buff++;
+  			if(rbyte == '$')
+  			{
+  				ws_receive_flag = 1;
+  			}
+
+
+  			// HAL_UART_EnableIt
+  			//_HAL_UART_SEND_REQ(&huart5, UART_RXDATA_FLUSH_REQUEST);
+  			__HAL_UART_ENABLE_IT(&huart5,UART_IT_RXNE);
+  		}
+  		if (UART5->SR & USART_SR_ORE)
+  		{
+  			HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+  		  //__HAL_UART_SEND_REQ(&huart4, UART_RXDATA_FLUSH_REQUEST);
+  		  //__HAL_UART_ENABLE_IT(&huart4,UART_IT_ORE);
+  		}
+*/
   /* USER CODE END UART5_IRQn 1 */
 }
 

@@ -64,6 +64,10 @@ typedef struct SensorData_{
 	uint32_t pitch_encoder;
 	uint32_t mast_encoder;
 	uint8_t limit1, limit2;
+
+	// Processed sensor data
+	float pitch_angle;
+	float vehicle_speed;
 }SensorData;
 
 extern SensorData sensor_data;
@@ -77,7 +81,9 @@ extern uint8_t rx_buff[64];
 extern uint8_t index_buff;
 extern uint8_t ws_receive_flag;
 
+extern uint8_t timer_50ms_flag;
 extern uint8_t timer_100ms_flag;
+extern uint8_t timer_500ms_flag;
 
 /* USER CODE END EFP */
 
@@ -129,14 +135,14 @@ extern uint8_t timer_100ms_flag;
 #define PB1_EXTI_IRQn EXTI15_10_IRQn
 #define SD_DETECT_Pin GPIO_PIN_12
 #define SD_DETECT_GPIO_Port GPIOC
-#define LED1_Pin GPIO_PIN_4
-#define LED1_GPIO_Port GPIOD
-#define LED2_Pin GPIO_PIN_5
-#define LED2_GPIO_Port GPIOD
-#define LED3_Pin GPIO_PIN_6
-#define LED3_GPIO_Port GPIOD
-#define LED4_Pin GPIO_PIN_7
+#define LED4_Pin GPIO_PIN_4
 #define LED4_GPIO_Port GPIOD
+#define LED3_Pin GPIO_PIN_5
+#define LED3_GPIO_Port GPIOD
+#define LED2_Pin GPIO_PIN_6
+#define LED2_GPIO_Port GPIOD
+#define LED1_Pin GPIO_PIN_7
+#define LED1_GPIO_Port GPIOD
 #define Rotor_RPM_Pin GPIO_PIN_0
 #define Rotor_RPM_GPIO_Port GPIOE
 #define Rotor_RPM_EXTI_IRQn EXTI0_IRQn
