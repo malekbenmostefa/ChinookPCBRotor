@@ -107,6 +107,7 @@ uint8_t timer_500ms_flag;
 // 500ms flags
 uint8_t flag_alive_led = 0;
 uint8_t flag_uart_tx_send = 0;
+uint8_t flag_lora_tx_send = 0;
 // 100ms flags
 uint8_t flag_acq_interval = 0;
 // 50ms flags
@@ -172,9 +173,9 @@ uint32_t ReadPitchEncoder()
 	{
 		pitch_data <<= 1;
 		HAL_GPIO_WritePin(Pitch_Clock_GPIO_Port, Pitch_Clock_Pin, GPIO_PIN_RESET);
-		for (int i = 0; i < 2000; ++i) {} // Wait 10 us
+		for (int i = 0; i < 40; ++i) {} // Wait 10 us
 		HAL_GPIO_WritePin(Pitch_Clock_GPIO_Port, Pitch_Clock_Pin, GPIO_PIN_SET);
-		for (int i = 0; i < 2000; ++i) {} // Wait 10 us
+		for (int i = 0; i < 40; ++i) {} // Wait 10 us
 		pitch_data |= HAL_GPIO_ReadPin(Pitch_Data_GPIO_Port, Pitch_Data_Pin);
 	}
 
@@ -225,13 +226,14 @@ void ExecuteStateMachine()
 	{
 		timer_50ms_flag = 0;
 
-		flag_rpm_process = 1;
+		// flag_rpm_process = 1;
 	}
 	if (timer_100ms_flag)
 	{
 		timer_100ms_flag = 0;
 
 		flag_acq_interval = 1;
+		flag_rpm_process = 1;
 	}
 	if (timer_500ms_flag)
 	{
@@ -311,6 +313,14 @@ uint32_t DoStateInit()
 	flag_uart_tx_send = 0;
 	flag_acq_interval = 0;
 	flag_rpm_process = 0;
+
+	// Start interrupts
+	HAL_UART_Receive_IT(&huart5, &ws_rx_byte, 1);
+
+	HAL_TIM_Base_Start_IT(&htim2);
+	// HAL_TIM_Base_Start_IT(&htim3);
+	HAL_TIM_Base_Start_IT(&htim4);
+	HAL_TIM_Base_Start_IT(&htim5);
 
 
 	// Enable USB TX
@@ -403,6 +413,7 @@ uint32_t DoStateAcquisition()
 		static const float wheel_counter_to_rpm_constant = (RPM_CNT_TIME_INVERSE / WHEEL_CNT_PER_ROT) * 60.0f;
 
 		sensor_data.wheel_rpm = (float)wheel_rpm_counter * wheel_counter_to_rpm_constant;
+		// sensor_data.wheel_rpm = (float)wheel_rpm_counter;
 		sensor_data.rotor_rpm = (float)rotor_rpm_counter * rotor_counter_to_rpm_constant;
 
 		wheel_rpm_counter = 0;
@@ -464,13 +475,15 @@ uint32_t DoStateUartTx()
 		FloatToString(sensor_data.wind_direction, 2, wind_direction_str);
 
 		static unsigned char rotor_rpm_str[20] = {0};
+		static unsigned char wheel_rpm_str[20] = {0};
 		FloatToString(sensor_data.rotor_rpm, 2, rotor_rpm_str);
+		FloatToString(sensor_data.wheel_rpm, 2, wheel_rpm_str);
 
 
 		// unsigned char msg[] = "Hello World! ";
 		unsigned char msg[256] = { 0 };
-		sprintf(msg, "Wind Speed = %s,  Wind Direction = %s, rotor rpm = %s, pitch = %d \n\r",
-				wind_speed_str, wind_direction_str, rotor_rpm_str, sensor_data.pitch_encoder);
+		sprintf(msg, "Wind Speed = %s,  Wind Direction = %s, rotor rpm = %s, wheel_rpm = %s, pitch = %d \n\r",
+				wind_speed_str, wind_direction_str, rotor_rpm_str, wheel_rpm_str, sensor_data.pitch_encoder);
 		//sprintf(msg, "Wind Speed = %d,  Wind Direction = %d \n\r", 1234, 5678);
 
 		//unsigned char msg[] = "Hello World! \n\r";
@@ -620,15 +633,8 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   //HAL_UART_Receive_IT(&huart5, (uint8_t *)aRxBuffer, sizeof(aRxBuffer));
-  HAL_UART_Receive_IT(&huart5, &ws_rx_byte, 1);
-
-  HAL_TIM_Base_Start_IT(&htim4);
-  HAL_TIM_Base_Start_IT(&htim5);
 
   current_state = STATE_INIT;
-
-  timer_500ms_flag = 0;
-  timer_100ms_flag = 0;
 
 
   /* USER CODE END 2 */
