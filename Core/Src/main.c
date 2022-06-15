@@ -73,6 +73,7 @@ I2C_HandleTypeDef hi2c3;
 
 SPI_HandleTypeDef hspi2;
 
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
@@ -108,6 +109,7 @@ uint8_t timer_500ms_flag;
 uint8_t flag_alive_led = 0;
 uint8_t flag_uart_tx_send = 0;
 uint8_t flag_lora_tx_send = 0;
+uint8_t flag_can_tx_send = 0;
 // 100ms flags
 uint8_t flag_acq_interval = 0;
 // 50ms flags
@@ -144,6 +146,7 @@ static void MX_I2C3_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_TIM5_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
 void ExecuteStateMachine();
@@ -165,6 +168,11 @@ uint32_t ReadPitchEncoder();
 uint32_t ReadMastEncoder();
 void FloatToString(float value, int decimal_precision, unsigned char* val);
 
+HAL_StatusTypeDef TransmitCAN(uint8_t id, uint8_t* buf, uint8_t size, uint8_t with_priority);
+
+void delay_us(uint16_t delay16_us);
+void delay_ms(uint16_t delay16_ms);
+
 
 /* USER CODE END PFP */
 
@@ -177,10 +185,15 @@ uint32_t ReadPitchEncoder()
 	for(int i = 0; i < 22; ++i)
 	{
 		pitch_data <<= 1;
+
 		HAL_GPIO_WritePin(Pitch_Clock_GPIO_Port, Pitch_Clock_Pin, GPIO_PIN_RESET);
-		for (int i = 0; i < 40; ++i) {} // Wait 10 us
+		// for (int i = 0; i < 40; ++i) {} // Wait 10 us
+		delay_us(10);
+
 		HAL_GPIO_WritePin(Pitch_Clock_GPIO_Port, Pitch_Clock_Pin, GPIO_PIN_SET);
-		for (int i = 0; i < 40; ++i) {} // Wait 10 us
+		// for (int i = 0; i < 40; ++i) {} // Wait 10 us
+		delay_us(10);
+
 		pitch_data |= HAL_GPIO_ReadPin(Pitch_Data_GPIO_Port, Pitch_Data_Pin);
 	}
 
@@ -203,7 +216,7 @@ void FloatToString(float value, int decimal_precision, unsigned char* val)
 }
 
 
-HAL_StatusTypeDef TransmitCAN(uint8_t id, uint8_t* buf, uint8_t size)
+HAL_StatusTypeDef TransmitCAN(uint8_t id, uint8_t* buf, uint8_t size, uint8_t with_priority)
 {
 	// CAN_TxHeaderTypeDef msg;
 	pTxHeader.StdId = id;
@@ -218,7 +231,22 @@ HAL_StatusTypeDef TransmitCAN(uint8_t id, uint8_t* buf, uint8_t size)
 		if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) > 0)
 			break;
 		// Otherwise wait until free mailbox
-		for (int j = 0; j < 1000; ++j) {}
+		// for (int j = 0; j < 500; ++j) {}
+		delay_us(50);
+	}
+	if (with_priority)
+	{
+		// If message is important, make sure no other messages are queud to ensure it will be sent after any other
+		// values that could override it.
+		for (int i = 0; i < 10; ++i)
+		{
+			// Check that all 3 mailboxes are empty
+			if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 3)
+				break;
+			// Otherwise wait until 3 free mailbox
+			// for (int j = 0; j < 500; ++j) {}
+			delay_us(50);
+		}
 	}
 
 	uint32_t mb;
@@ -235,15 +263,35 @@ HAL_StatusTypeDef TransmitCAN(uint8_t id, uint8_t* buf, uint8_t size)
 	return ret;
 }
 
+void delay_us(uint16_t delay16_us)
+{
+	htim1.Instance->CNT = 0;
+	while (htim1.Instance->CNT < delay16_us);
+}
+
+void delay_ms(uint16_t delay16_ms)
+{
+	while(delay16_ms > 0)
+	{
+		htim1.Instance->CNT = 0;
+		delay16_ms--;
+		while (htim1.Instance->CNT < 1000);
+	}
+}
+
 
 
 void ExecuteStateMachine()
 {
+	// Make sure not to saturate cpu with state machine
+	delay_us(250);
+
 	// Check for timer flags
 	if (timer_50ms_flag)
 	{
 		timer_50ms_flag = 0;
 
+		// flag_can_tx_send = 1;
 		// flag_rpm_process = 1;
 	}
 	if (timer_100ms_flag)
@@ -252,6 +300,7 @@ void ExecuteStateMachine()
 
 		flag_acq_interval = 1;
 		flag_rpm_process = 1;
+		flag_can_tx_send = 1;
 	}
 	if (timer_500ms_flag)
 	{
@@ -331,6 +380,8 @@ uint32_t DoStateInit()
 	flag_uart_tx_send = 0;
 	flag_acq_interval = 0;
 	flag_rpm_process = 0;
+	flag_can_tx_send = 0;
+
 
 	// Start interrupts
 	HAL_UART_Receive_IT(&huart5, &ws_rx_byte, 1);
@@ -458,6 +509,46 @@ uint32_t DoStateCheckROPS()
 
 uint32_t DoStateMotorControl()
 {
+	static uint32_t dir_left = MOTOR_DIRECTION_LEFT;
+	static uint32_t dir_right = MOTOR_DIRECTION_RIGHT;
+	static uint32_t dir_stop = MOTOR_DIRECTION_STOP;
+
+	if(GPIO_PIN_SET == HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin)) // PD_14 -- PB2
+	{
+	    //HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin);
+	    //HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+	    if (pb2_value == 1)
+	    {
+	    	pb2_value = 0;
+		  	HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+
+		    TransmitCAN(MARIO_PITCH_MANUAL_CMD, (uint8_t*)&dir_stop, 4, 1);
+	    }
+	}
+	if (GPIO_PIN_SET == HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin)) // PD_15 -- PB1
+	{
+	    //HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
+	    //HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+	    if (pb1_value == 1)
+	    {
+		    pb1_value = 0;
+		    HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+
+		    TransmitCAN(MARIO_PITCH_MANUAL_CMD, (uint8_t*)&dir_stop, 4, 1);
+	    }
+	}
+
+	if (pb1_update)
+	{
+		pb1_update = 0;
+	    TransmitCAN(MARIO_PITCH_MANUAL_CMD, (uint8_t*)&dir_left, 4, 0);
+	}
+	if (pb2_update)
+	{
+		pb2_update = 0;
+	    TransmitCAN(MARIO_PITCH_MANUAL_CMD, (uint8_t*)&dir_right, 4, 0);
+	}
+
 	return STATE_CAN;
 }
 
@@ -469,6 +560,54 @@ uint32_t DoStateROPS()
 
 uint32_t DoStateCan()
 {
+	/*
+#define MARIO_PITCH_ANGLE 0x01
+#define MARIO_MAST_ANGLE 0x02
+#define MARIO_TURBINE_RPM 0x03
+#define MARIO_WHEEL_RPM 0x04
+#define MARIO_WIND_DIRECTION 0x05
+#define MARIO_WIND_SPEED 0x06
+
+#define MARIO_LOADCELL 0x09
+#define MARIO_TORQUE 0x0A
+#define MARIO_LIMIT_SWITCH 0x0B
+	*/
+	if (flag_can_tx_send) // Sent every 100ms
+	{
+		flag_can_tx_send = 0;
+
+		TransmitCAN(MARIO_PITCH_ANGLE, (uint8_t*)&sensor_data.pitch_angle, 4, 0);
+		delay_us(100);
+
+		TransmitCAN(MARIO_MAST_ANGLE, (uint8_t*)&sensor_data.mast_angle, 4, 0);
+		delay_us(100);
+
+		TransmitCAN(MARIO_MAST_ANGLE, (uint8_t*)&sensor_data.vehicle_speed, 4, 0);
+		delay_us(100);
+
+		TransmitCAN(MARIO_ROTOR_RPM, (uint8_t*)&sensor_data.rotor_rpm, 4, 0);
+		delay_us(100);
+
+		TransmitCAN(MARIO_WHEEL_RPM, (uint8_t*)&sensor_data.wheel_rpm, 4, 0);
+		delay_us(100);
+
+		TransmitCAN(MARIO_WIND_DIRECTION, (uint8_t*)&sensor_data.wind_direction, 4, 0);
+		delay_us(100);
+
+		TransmitCAN(MARIO_WIND_SPEED, (uint8_t*)&sensor_data.wind_speed, 4, 0);
+		delay_us(100);
+
+		TransmitCAN(MARIO_TORQUE, (uint8_t*)&sensor_data.torque, 4, 0);
+		delay_us(100);
+
+		TransmitCAN(MARIO_LOADCELL, (uint8_t*)&sensor_data.loadcell, 4, 0);
+		delay_us(100);
+
+		// Also send the turbine rpm value to the drive motor for ROPS detection
+		TransmitCAN(MARIO_MOTOR_ROTOR_RPM, (uint8_t*)&sensor_data.rotor_rpm, 4, 0);
+		delay_us(100);
+	}
+
 	return STATE_DATA_LOGGING;
 }
 
@@ -654,22 +793,23 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM5_Init();
   MX_TIM2_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   //HAL_UART_Receive_IT(&huart5, (uint8_t *)aRxBuffer, sizeof(aRxBuffer));
 
   current_state = STATE_INIT;
 
+  while (1)
+  {
+	  ExecuteStateMachine();
 
-  static uint8_t buf0[4] = {0};
-  static uint8_t buf1[4] = {0};
-  static uint8_t buf2[4] = {0};
-  uint32_t buf1_value = 0x200;
-  uint32_t buf2_value = 0x1;
-  memcpy(buf1, &buf1_value, 4);
-  memcpy(buf2, &buf2_value, 4);
+	  // Delay important to not saturate cpu with state machine
+	  //for (int i = 0; i < 2500; ++i) {}
+	  //HAL_Delay(5);
+  }
 
-  uint32_t buf0_value = 0x2;
-  memcpy(buf0, &buf0_value, 4);
+
+
 
   DoStateInit();
   while (1)
@@ -682,7 +822,7 @@ int main(void)
 
 		  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
 	  }
-
+	  /*
 	  if(GPIO_PIN_SET == HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin)) // PD_14 -- PB2
 	  {
 		//HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin);
@@ -718,6 +858,7 @@ int main(void)
 		  TransmitCAN(0xAA, buf2, sizeof(buf2));
 		  pb2_update = 0;
 	  }
+	  */
   }
 
 
@@ -867,7 +1008,7 @@ static void MX_CAN1_Init(void)
   hcan1.Init.AutoWakeUp = DISABLE;
   hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
-  hcan1.Init.TransmitFifoPriority = DISABLE;
+  hcan1.Init.TransmitFifoPriority = ENABLE;
   if (HAL_CAN_Init(&hcan1) != HAL_OK)
   {
     Error_Handler();
@@ -1047,6 +1188,55 @@ static void MX_SPI2_Init(void)
   /* USER CODE BEGIN SPI2_Init 2 */
 
   /* USER CODE END SPI2_Init 2 */
+
+}
+
+/**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 47;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 65535;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  // Start the timer
+  HAL_TIM_Base_Start(&htim1);
+
+  /* USER CODE END TIM1_Init 2 */
 
 }
 

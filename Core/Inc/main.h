@@ -58,7 +58,7 @@ typedef struct SensorData_{
 	float wheel_rpm;
 	float rotor_rpm;
 	float torque;
-	float load_cell;
+	float loadcell;
 	float wind_direction;
 	float wind_speed;
 	uint32_t pitch_encoder;
@@ -67,6 +67,7 @@ typedef struct SensorData_{
 
 	// Processed sensor data
 	float pitch_angle;
+	float mast_angle;
 	float vehicle_speed;
 }SensorData;
 
