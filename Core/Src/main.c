@@ -122,6 +122,11 @@ CAN_TxHeaderTypeDef pTxHeader;
 CAN_RxHeaderTypeDef pRxHeader;
 uint32_t txMailbox;
 
+uint8_t pb1_value = 0;
+uint8_t pb2_value = 0;
+uint8_t pb1_update = 0;
+uint8_t pb2_update = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -207,12 +212,25 @@ HAL_StatusTypeDef TransmitCAN(uint8_t id, uint8_t* buf, uint8_t size)
 	pTxHeader.DLC = size; // Number of bytes to send
 	pTxHeader.TransmitGlobalTime = DISABLE;
 
+	for (int i = 0; i < 10; ++i)
+	{
+		// Check that mailbox is available for tx
+		if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) > 0)
+			break;
+		// Otherwise wait until free mailbox
+		for (int j = 0; j < 1000; ++j) {}
+	}
+
 	uint32_t mb;
 	HAL_StatusTypeDef ret = HAL_CAN_AddTxMessage(&hcan1, &pTxHeader, buf, &mb);
 	if (ret != HAL_OK)
+	{
+		HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_SET);
 		return ret;
+	}
 
 	// Update the CAN led
+	HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_RESET);
 	// ToggleLed(LED_CAN);
 	return ret;
 }
@@ -548,6 +566,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   }
 }
 
+void HAL_CAN_ErrorCallback(CAN_HandleTypeDef* hcan)
+{
+	HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_SET);
+}
+
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan)
 {
 	typedef union RxToInt_
@@ -635,6 +658,67 @@ int main(void)
   //HAL_UART_Receive_IT(&huart5, (uint8_t *)aRxBuffer, sizeof(aRxBuffer));
 
   current_state = STATE_INIT;
+
+
+  static uint8_t buf0[4] = {0};
+  static uint8_t buf1[4] = {0};
+  static uint8_t buf2[4] = {0};
+  uint32_t buf1_value = 0x200;
+  uint32_t buf2_value = 0x1;
+  memcpy(buf1, &buf1_value, 4);
+  memcpy(buf2, &buf2_value, 4);
+
+  uint32_t buf0_value = 0x2;
+  memcpy(buf0, &buf0_value, 4);
+
+  DoStateInit();
+  while (1)
+  {
+	  HAL_Delay(10);
+
+	  if (timer_500ms_flag)
+      {
+		  timer_500ms_flag = 0;
+
+		  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+	  }
+
+	  if(GPIO_PIN_SET == HAL_GPIO_ReadPin(PB2_GPIO_Port, PB2_Pin)) // PD_14 -- PB2
+	  {
+		//HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin);
+		//HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+		  if (pb2_value == 1)
+		  {
+			  pb2_value = 0;
+			  HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+
+			  TransmitCAN(0xAA, buf0, sizeof(buf0));
+		  }
+	  }
+	  if (GPIO_PIN_SET == HAL_GPIO_ReadPin(PB1_GPIO_Port, PB1_Pin)) // PD_15 -- PB1
+	  {
+		//HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
+		//HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+		  if (pb1_value == 1)
+		  {
+			  pb1_value = 0;
+			  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+
+			  TransmitCAN(0xAA, buf0, sizeof(buf0));
+		  }
+	  }
+
+	  if (pb1_update)
+	  {
+		  TransmitCAN(0xAA, buf1, sizeof(buf1));
+		  pb1_update = 0;
+	  }
+	  if (pb2_update)
+	  {
+		  TransmitCAN(0xAA, buf2, sizeof(buf2));
+		  pb2_update = 0;
+	  }
+  }
 
 
   /* USER CODE END 2 */
@@ -773,11 +857,11 @@ static void MX_CAN1_Init(void)
 
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 16;
+  hcan1.Init.Prescaler = 12;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan1.Init.TimeSeg1 = CAN_BS1_1TQ;
-  hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
+  hcan1.Init.TimeSeg1 = CAN_BS1_11TQ;
+  hcan1.Init.TimeSeg2 = CAN_BS2_4TQ;
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = DISABLE;
   hcan1.Init.AutoWakeUp = DISABLE;
@@ -789,6 +873,35 @@ static void MX_CAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN1_Init 2 */
+
+    CAN_FilterTypeDef filter_all;
+    	// All common bits go into the ID register
+    filter_all.FilterIdHigh = 0x0000;
+    filter_all.FilterIdLow = 0x0000;
+
+    	// Which bits to compare for filter
+    filter_all.FilterMaskIdHigh = 0x0000;
+    filter_all.FilterMaskIdLow = 0x0000;
+
+    filter_all.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+    filter_all.FilterBank = 18; // Which filter to use from the assigned ones
+    filter_all.FilterMode = CAN_FILTERMODE_IDMASK;
+    filter_all.FilterScale = CAN_FILTERSCALE_32BIT;
+    filter_all.FilterActivation = CAN_FILTER_ENABLE;
+    filter_all.SlaveStartFilterBank = 20; // How many filters to assign to CAN1
+	if (HAL_CAN_ConfigFilter(&hcan1, &filter_all) != HAL_OK)
+	{
+	  Error_Handler();
+	}
+
+  if (HAL_CAN_Start(&hcan1) != HAL_OK)
+  	{
+  		Error_Handler();
+  	}
+  	if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_ERROR_WARNING | CAN_IT_ERROR_PASSIVE) != HAL_OK)
+  	{
+  		Error_Handler();
+  	}
 
   /* USER CODE END CAN1_Init 2 */
 
@@ -1315,13 +1428,21 @@ static void MX_GPIO_Init(void)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    if(GPIO_Pin == GPIO_PIN_14) // PD_14
+    if(GPIO_Pin == GPIO_PIN_14) // PD_14 -- PB2
     {
-    	HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin);
+    	//HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin);
+    	HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+    	pb2_value = 1;
+
+    	pb2_update = 1;
     }
-    else if (GPIO_Pin == GPIO_PIN_15) // PD_15
+    else if (GPIO_Pin == GPIO_PIN_15) // PD_15 -- PB1
     {
-    	HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
+    	//HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
+    	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+    	pb1_value = 1;
+
+    	pb1_update = 1;
     }
     else if (GPIO_Pin == GPIO_PIN_0) // Rotor RPM
     {
