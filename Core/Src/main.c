@@ -39,6 +39,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+// TODO: (Marc) Address of ADC for torque/loadcell
+#define ADC_I2C_ADDR 0x99
+
 enum STATES
 {
 	STATE_INIT = 0,
@@ -164,9 +167,19 @@ void DoStateError();
 
 
 
+HAL_StatusTypeDef ADC_SendI2C(uint8_t addr, uint8_t reg, uint16_t data);
+uint16_t ADC_ReadI2C(uint8_t addr, uint8_t reg);
+
+uint32_t ReadTorqueADC();
+uint32_t ReadLoadcellADC();
+
+
 uint32_t ReadPitchEncoder();
 uint32_t ReadMastEncoder();
 void FloatToString(float value, int decimal_precision, unsigned char* val);
+
+void ProcessCanMessage();
+void CAN_ReceiveFifoCallback(CAN_HandleTypeDef* hcan, uint32_t fifo);
 
 HAL_StatusTypeDef TransmitCAN(uint8_t id, uint8_t* buf, uint8_t size, uint8_t with_priority);
 
@@ -178,6 +191,55 @@ void delay_ms(uint16_t delay16_ms);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+HAL_StatusTypeDef ADC_SendI2C(uint8_t addr, uint8_t reg, uint16_t data)
+{
+	uint8_t buf[3];
+
+	buf[0] = reg;
+	buf[1] = (data >> 8) & 0xFF;
+	buf[2] = data & 0xFF;
+
+	return HAL_I2C_Master_Transmit(&hi2c3, addr, buf, sizeof(buf), HAL_MAX_DELAY);
+}
+
+uint16_t ADC_ReadI2C(uint8_t addr, uint8_t reg)
+{
+	HAL_StatusTypeDef ret;
+
+	uint8_t cmd[1];
+	cmd[0] = reg;
+
+	ret = HAL_I2C_Master_Transmit(&hi2c3, addr, cmd, sizeof(cmd), HAL_MAX_DELAY);
+	if (ret != HAL_OK)
+	{
+		// TODO
+	}
+
+	// Reading 16bits for INA
+	uint8_t buf[2];
+	ret = HAL_I2C_Master_Receive(&hi2c3, addr, buf, sizeof(buf), HAL_MAX_DELAY);
+	if (ret != HAL_OK)
+	{
+		// TODO
+	}
+
+	// return buf[0];
+	uint16_t result = (buf[0] << 8) | buf[1];
+	return result;
+}
+
+uint32_t ReadTorqueADC()
+{
+	// TODO: (Marc)
+	return 0;
+}
+
+uint32_t ReadLoadcellADC()
+{
+	// TODO: (Marc)
+	return 0;
+}
 
 uint32_t ReadPitchEncoder()
 {
@@ -213,54 +275,6 @@ void FloatToString(float value, int decimal_precision, unsigned char* val)
 	int decimal = (int)((value - (float)integer) * (float)(pow(10, decimal_precision)));
 
 	sprintf(val, "%d.%d", integer, decimal);
-}
-
-
-HAL_StatusTypeDef TransmitCAN(uint8_t id, uint8_t* buf, uint8_t size, uint8_t with_priority)
-{
-	// CAN_TxHeaderTypeDef msg;
-	pTxHeader.StdId = id;
-	pTxHeader.IDE = CAN_ID_STD;
-	pTxHeader.RTR = CAN_RTR_DATA;
-	pTxHeader.DLC = size; // Number of bytes to send
-	pTxHeader.TransmitGlobalTime = DISABLE;
-
-	for (int i = 0; i < 10; ++i)
-	{
-		// Check that mailbox is available for tx
-		if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) > 0)
-			break;
-		// Otherwise wait until free mailbox
-		// for (int j = 0; j < 500; ++j) {}
-		delay_us(50);
-	}
-	if (with_priority)
-	{
-		// If message is important, make sure no other messages are queud to ensure it will be sent after any other
-		// values that could override it.
-		for (int i = 0; i < 10; ++i)
-		{
-			// Check that all 3 mailboxes are empty
-			if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 3)
-				break;
-			// Otherwise wait until 3 free mailbox
-			// for (int j = 0; j < 500; ++j) {}
-			delay_us(50);
-		}
-	}
-
-	uint32_t mb;
-	HAL_StatusTypeDef ret = HAL_CAN_AddTxMessage(&hcan1, &pTxHeader, buf, &mb);
-	if (ret != HAL_OK)
-	{
-		HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_SET);
-		return ret;
-	}
-
-	// Update the CAN led
-	HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_RESET);
-	// ToggleLed(LED_CAN);
-	return ret;
 }
 
 void delay_us(uint16_t delay16_us)
@@ -468,6 +482,15 @@ uint32_t DoStateAcquisition()
 		// Read limit switches of mast
 		sensor_data.limit1 = HAL_GPIO_ReadPin(LIMIT1_GPIO_Port, LIMIT1_Pin);
 		sensor_data.limit2 = HAL_GPIO_ReadPin(LIMIT2_GPIO_Port, LIMIT2_Pin);
+
+		// Read Torque + Loadcell adc
+#define ADC_RESOLUTION 65536.0f  // (16 bits)
+#define MAX_TORQUE 500.0f  // 500 N.m
+#define MAX_LOADCELL 400.0f  // 400 Lbs
+		static const float torque_adc_factor = MAX_TORQUE / ADC_RESOLUTION;
+		static const float loadcell_adc_factor = MAX_LOADCELL / ADC_RESOLUTION;
+		sensor_data.torque = ReadTorqueADC() * torque_adc_factor;
+		sensor_data.loadcell = ReadLoadcellADC() * loadcell_adc_factor;
 	}
 
 	if (flag_rpm_process)
@@ -636,11 +659,29 @@ uint32_t DoStateUartTx()
 		FloatToString(sensor_data.rotor_rpm, 2, rotor_rpm_str);
 		FloatToString(sensor_data.wheel_rpm, 2, wheel_rpm_str);
 
+		static unsigned char torque_str[20] = {0};
+		static unsigned char loadcell_str[20] = {0};
+		FloatToString(sensor_data.torque, 2, torque_str);
+		FloatToString(sensor_data.loadcell, 2, loadcell_str);
+
+		// Compute angle from pitch encoder value
+		float pitch_angle = 0.0f;
+		static unsigned char pitch_angle_str[20] = {0};
+		FloatToString(pitch_angle, 2, pitch_angle_str);
+
+		static const unsigned char clear_cmd[] = "\33c\e[3J";
+		if (HAL_OK != HAL_UART_Transmit(&huart2, clear_cmd, strlen(clear_cmd), HAL_MAX_DELAY))
+		{
+			// UART TX Error
+			HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+		}
 
 		// unsigned char msg[] = "Hello World! ";
-		unsigned char msg[256] = { 0 };
-		sprintf(msg, "Wind Speed = %s,  Wind Direction = %s, rotor rpm = %s, wheel_rpm = %s, pitch = %d \n\r",
-				wind_speed_str, wind_direction_str, rotor_rpm_str, wheel_rpm_str, sensor_data.pitch_encoder);
+		unsigned char msg[512] = { 0 };
+		sprintf(msg, "Wind Speed = %s,  Wind Direction = %s,  rotor rpm = %s,  wheel_rpm = %s \n\rPitch = %d,  angle = %s \n\rTorque = %s,  Loadcell = %s \n\r",
+				wind_speed_str, wind_direction_str, rotor_rpm_str, wheel_rpm_str,
+				sensor_data.pitch_encoder, pitch_angle_str,
+				torque_str, loadcell_str);
 		//sprintf(msg, "Wind Speed = %d,  Wind Direction = %d \n\r", 1234, 5678);
 
 		//unsigned char msg[] = "Hello World! \n\r";
@@ -705,11 +746,94 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   }
 }
 
+void ProcessCanMessage()
+{
+	typedef union BytesToType_
+	{
+		struct
+		{
+			uint8_t bytes[4];
+		};
+		int32_t int_val;
+		uint32_t uint_val;
+		float float_val;
+	} BytesToType;
+	static BytesToType bytesToType;
+
+
+	// Indicate CAN working with CAN led
+	HAL_GPIO_TogglePin(LED_CANA_GPIO_Port, LED_CANA_Pin);
+
+	// Technically CAN data can be 8 bytes but we only send 4-bytes data to the motor driver
+	// uint32_t upper_can_data = rxData[4] | (rxData[5] << 8) | (rxData[6] << 16) | (rxData[7] << 24);
+	uint32_t can_data = rxData[0] | (rxData[1] << 8) | (rxData[2] << 16) | (rxData[3] << 24);
+
+	if (pRxHeader.StdId == DRIVEMOTOR_PITCH_MODE_FEEDBACK)
+	{
+
+	}
+	else if (pRxHeader.StdId == DRIVEMOTOR_MAST_MODE_FEEDBACK)
+	{
+
+	}
+	else if (pRxHeader.StdId == DRIVEMOTOR_PITCH_DONE)
+	{
+
+	}
+	else if (pRxHeader.StdId == DRIVEMOTOR_PITCH_FAULT_STALL)
+	{
+
+	}
+	else if (pRxHeader.StdId == DRIVEMOTOR_MAST_FAULT_STALL)
+	{
+
+	}
+	else if (pRxHeader.StdId == BACKPLANE_TOTAL_VOLTAGE)
+	{
+
+	}
+	else if (pRxHeader.StdId == BACKPLANE_TOTAL_CURRENT)
+	{
+
+	}
+	else
+	{
+		// Unknown CAN ID
+	}
+}
+
+void CAN_ReceiveFifoCallback(CAN_HandleTypeDef* hcan, uint32_t fifo)
+{
+	uint32_t num_messages = HAL_CAN_GetRxFifoFillLevel(hcan, fifo);
+	for (int i = 0; i < num_messages; ++i)
+	{
+		if (HAL_CAN_GetRxMessage(hcan, fifo, &pRxHeader, rxData) != HAL_OK)
+		{
+			Error_Handler();
+		}
+
+		ProcessCanMessage();
+	}
+}
+
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan)
+{
+	HAL_GPIO_TogglePin(LED_CANB_GPIO_Port, LED_CANB_Pin);
+	CAN_ReceiveFifoCallback(hcan, CAN_RX_FIFO0);
+}
+
+void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* hcan)
+{
+	HAL_GPIO_TogglePin(LED_CANB_GPIO_Port, LED_CANB_Pin);
+	CAN_ReceiveFifoCallback(hcan, CAN_RX_FIFO1);
+}
+
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef* hcan)
 {
 	HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_SET);
 }
 
+/*
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan)
 {
 	typedef union RxToInt_
@@ -750,6 +874,55 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan)
 		// Wrong CAN interface
 	}
 }
+*/
+
+HAL_StatusTypeDef TransmitCAN(uint8_t id, uint8_t* buf, uint8_t size, uint8_t with_priority)
+{
+	// CAN_TxHeaderTypeDef msg;
+	pTxHeader.StdId = id;
+	pTxHeader.IDE = CAN_ID_STD;
+	pTxHeader.RTR = CAN_RTR_DATA;
+	pTxHeader.DLC = size; // Number of bytes to send
+	pTxHeader.TransmitGlobalTime = DISABLE;
+
+	for (int i = 0; i < 10; ++i)
+	{
+		// Check that mailbox is available for tx
+		if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) > 0)
+			break;
+		// Otherwise wait until free mailbox
+		// for (int j = 0; j < 500; ++j) {}
+		delay_us(50);
+	}
+	if (with_priority)
+	{
+		// If message is important, make sure no other messages are queud to ensure it will be sent after any other
+		// values that could override it.
+		for (int i = 0; i < 10; ++i)
+		{
+			// Check that all 3 mailboxes are empty
+			if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 3)
+				break;
+			// Otherwise wait until 3 free mailbox
+			// for (int j = 0; j < 500; ++j) {}
+			delay_us(50);
+		}
+	}
+
+	uint32_t mb;
+	HAL_StatusTypeDef ret = HAL_CAN_AddTxMessage(&hcan1, &pTxHeader, buf, &mb);
+	if (ret != HAL_OK)
+	{
+		HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_SET);
+		return ret;
+	}
+
+	// Update the CAN led
+	HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_RESET);
+	// ToggleLed(LED_CAN);
+	return ret;
+}
+
 
 /* USER CODE END 0 */
 
@@ -1014,7 +1187,7 @@ static void MX_CAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN1_Init 2 */
-
+  /*
     CAN_FilterTypeDef filter_all;
     	// All common bits go into the ID register
     filter_all.FilterIdHigh = MARIO_FIFO0_RX_FILTER_ID_HIGH;
@@ -1034,6 +1207,47 @@ static void MX_CAN1_Init(void)
 	{
 	  Error_Handler();
 	}
+	*/
+
+  	CAN_FilterTypeDef sf_fifo0;
+  	// All common bits go into the ID register
+  	sf_fifo0.FilterIdHigh = MARIO_FIFO0_RX_FILTER_ID_HIGH;
+  	sf_fifo0.FilterIdLow = MARIO_FIFO0_RX_FILTER_ID_LOW;
+
+  	// Which bits to compare for filter
+  	sf_fifo0.FilterMaskIdHigh = MARIO_FIFO0_RX_FILTER_MASK_HIGH;
+  	sf_fifo0.FilterMaskIdLow = MARIO_FIFO0_RX_FILTER_MASK_LOW;
+
+  	sf_fifo0.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+  	sf_fifo0.FilterBank = 2; // Which filter to use from the assigned ones
+  	sf_fifo0.FilterMode = CAN_FILTERMODE_IDMASK;
+  	sf_fifo0.FilterScale = CAN_FILTERSCALE_32BIT;
+  	sf_fifo0.FilterActivation = CAN_FILTER_ENABLE;
+  	sf_fifo0.SlaveStartFilterBank = 20; // How many filters to assign to CAN1
+  	if (HAL_CAN_ConfigFilter(&hcan1, &sf_fifo0) != HAL_OK)
+  	{
+  	  Error_Handler();
+  	}
+
+  	CAN_FilterTypeDef sf_fifo1;
+  	// All common bits go into the ID register
+  	sf_fifo1.FilterIdHigh = MARIO_FIFO1_RX_FILTER_ID_HIGH;
+  	sf_fifo1.FilterIdLow = MARIO_FIFO1_RX_FILTER_ID_LOW;
+
+  	// Which bits to compare for filter
+  	sf_fifo1.FilterMaskIdHigh = MARIO_FIFO1_RX_FILTER_MASK_HIGH;
+  	sf_fifo1.FilterMaskIdLow = MARIO_FIFO1_RX_FILTER_MASK_LOW;
+
+  	sf_fifo1.FilterFIFOAssignment = CAN_FILTER_FIFO1;
+  	sf_fifo1.FilterBank = 3; // Which filter to use from the assigned ones
+  	sf_fifo1.FilterMode = CAN_FILTERMODE_IDMASK;
+  	sf_fifo1.FilterScale = CAN_FILTERSCALE_32BIT;
+  	sf_fifo1.FilterActivation = CAN_FILTER_ENABLE;
+  	sf_fifo1.SlaveStartFilterBank = 20; // How many filters to assign to CAN1
+  	if (HAL_CAN_ConfigFilter(&hcan1, &sf_fifo1) != HAL_OK)
+  	{
+  	  Error_Handler();
+  	}
 
   if (HAL_CAN_Start(&hcan1) != HAL_OK)
   	{
