@@ -1017,12 +1017,12 @@ static void MX_CAN1_Init(void)
 
     CAN_FilterTypeDef filter_all;
     	// All common bits go into the ID register
-    filter_all.FilterIdHigh = 0x0000;
-    filter_all.FilterIdLow = 0x0000;
+    filter_all.FilterIdHigh = MARIO_FIFO0_RX_FILTER_ID_HIGH;
+    filter_all.FilterIdLow = MARIO_FIFO0_RX_FILTER_ID_LOW;
 
     	// Which bits to compare for filter
-    filter_all.FilterMaskIdHigh = 0x0000;
-    filter_all.FilterMaskIdLow = 0x0000;
+    filter_all.FilterMaskIdHigh = MARIO_FIFO0_RX_FILTER_MASK_HIGH;
+    filter_all.FilterMaskIdLow = MARIO_FIFO0_RX_FILTER_MASK_LOW;
 
     filter_all.FilterFIFOAssignment = CAN_FILTER_FIFO0;
     filter_all.FilterBank = 18; // Which filter to use from the assigned ones
