@@ -65,6 +65,14 @@ typedef struct SensorData_{
 	uint32_t mast_encoder;
 	uint8_t limit1, limit2;
 
+	// Motor modes
+	uint8_t feedback_pitch_mode;
+	uint8_t feedback_mast_mode;
+
+	// Motor faults
+	uint8_t pitch_fault_stall;
+	uint8_t mast_fault_stall;
+
 	// Processed sensor data
 	float pitch_angle;
 	float mast_angle;
