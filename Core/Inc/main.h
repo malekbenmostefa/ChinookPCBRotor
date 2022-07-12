@@ -69,6 +69,8 @@ typedef struct SensorData_{
 	uint8_t feedback_pitch_mode;
 	uint8_t feedback_mast_mode;
 
+	uint8_t feedback_pitch_rops;
+
 	// Motor faults
 	uint8_t pitch_fault_stall;
 	uint8_t mast_fault_stall;

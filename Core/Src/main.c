@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "chinook_can_ids.h"
 
@@ -57,6 +58,9 @@ enum STATES
 	STATE_ERROR = 0xFF
 
 };
+
+#define FALSE 0
+#define TRUE 1
 
 /* USER CODE END PD */
 
@@ -133,6 +137,8 @@ uint8_t pb2_update = 0;
 
 uint8_t pitch_done = 0;
 
+uint8_t b_rops = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -165,8 +171,13 @@ uint32_t DoStateUartTx();
 
 void DoStateError();
 
+// Pitch auto algorithm
+float CalcTSR();
+float CalcPitchAuto();
 
-float CalcPitchAngle();
+float CalcPitchAnglePales(uint8_t bound_angle);
+
+void SendPitchROPSCmd();
 void SendPitchAngleCmd(float target_pitch);
 
 HAL_StatusTypeDef ADC_SendI2C(uint8_t addr, uint8_t reg, uint16_t data);
@@ -211,45 +222,181 @@ void delay_ms(uint16_t delay16_ms)
 	}
 }
 
-
-float CalcPitchAngle()
+static float BoundAngleSemiCircle(float angle)
 {
+	if (angle < -180.0f)
+		return angle + 360.0f;
+	else if (angle > 180.0f)
+		return angle - 360.0f;
+	else
+		return angle;
+}
+
+
+float CalcTSR()
+{
+#define PI 3.1415926535f
+	static const float RPM_TO_RADS = 2.0f * PI / 60.0f;
+	float rotor_speed_omega = RPM_TO_RADS * sensor_data.rotor_rpm;
+
+#define KNOTS_TO_MS 0.514444f
+	float wind_speed_ms = KNOTS_TO_MS * sensor_data.wind_speed;
+
+#define PALE_RADIUS 0.918f
+
+	float tsr = (PALE_RADIUS * rotor_speed_omega) / wind_speed_ms;
+	return tsr;
+}
+
+float CalcPitchAuto()
+{
+	float tsr = CalcTSR();
+
+	float tsr2 = tsr * tsr;
+	float tsr3 = tsr2 * tsr;
+	float tsr4 = tsr2 * tsr2;
+	float tsr5 = tsr4 * tsr;
+	float tsr6 = tsr3 * tsr2;
+
+	float pitch_target = -0.00361082f *  tsr6 +
+						  0.12772891f *  tsr5 -
+						  1.76974117f *  tsr4 +
+						  11.90368681f * tsr3 -
+						  38.19438424f * tsr2 +
+						  43.63402687f * tsr +
+						  4.55041087;
+
+	return pitch_target;
+}
+
+
 #define MAX_PITCH_VALUE 4194303
+#define HALF_MAX_VALUE 2097152
+
 #define PITCH_ABSOLUTE_ZERO 3628800
+#define PITCH_ABSOLUTE_ROPS 3142633
 
-	uint32_t delta_pitch = (sensor_data.pitch_encoder - PITCH_ABSOLUTE_ZERO);
+#define MAX_STEPS_PER_CMD 500
 
-	static const float PITCH_TO_ANGLE_RATIO = (360.0f / (float)MAX_PITCH_VALUE);
+static float CalcDeltaPitch(uint32_t reference_point)
+{
+	int32_t delta_pitch = (sensor_data.pitch_encoder - reference_point);
+	uint32_t abs_delta_pitch = abs(delta_pitch);
+
+	// Adjust the pitch value if greater than half distance around full circle
+	if (abs_delta_pitch >= HALF_MAX_VALUE)
+	{
+		if (delta_pitch < 0)
+			delta_pitch = (MAX_PITCH_VALUE - abs_delta_pitch);
+		else
+			delta_pitch = -(MAX_PITCH_VALUE - abs_delta_pitch);
+	}
+
+	return delta_pitch;
+}
+
+float CalcPitchAnglePales(uint8_t bound_angle)
+{
+	float delta_pitch = CalcDeltaPitch(PITCH_ABSOLUTE_ZERO);
+	/*
+	int32_t delta_pitch = (sensor_data.pitch_encoder - PITCH_ABSOLUTE_ZERO);
+	uint32_t abs_delta_pitch = abs(delta_pitch);
+
+	// Adjust the pitch value if greater than half distance around full circle
+	if (abs_delta_pitch >= HALF_MAX_VALUE)
+	{
+		if (delta_pitch < 0)
+			delta_pitch = (MAX_PITCH_VALUE - abs_delta_pitch);
+		else
+			delta_pitch = -(MAX_PITCH_VALUE - abs_delta_pitch);
+	}
+	*/
+
+#define ENCODER_TO_PALES_RATIO (3.0f / 2.0f)
+	static const float PITCH_TO_ANGLE_RATIO = ENCODER_TO_PALES_RATIO * (360.0f / (float)MAX_PITCH_VALUE);
 	float pitch_angle = (float)delta_pitch * PITCH_TO_ANGLE_RATIO;
+
+	// Bound angle between -180 and 180 degrees
+	if (bound_angle)
+		pitch_angle = BoundAngleSemiCircle(pitch_angle);
 
 	return pitch_angle;
 }
 
+void SendPitchROPSCmd()
+{
+	// Negative because we want pitch to ROPS (but we compute the other direction)
+	float delta_pitch = -CalcDeltaPitch(PITCH_ABSOLUTE_ROPS);
+
+	static const float pitch_to_angle = 360.0f / MAX_PITCH_VALUE;
+	float delta_angle_encoder = delta_pitch * pitch_to_angle;
+
+	static const float angle_mov_per_step_inv = 293.89f / 1.8f;
+	int nb_steps = (int)(delta_angle_encoder * angle_mov_per_step_inv);
+	// static const float angle_mov_per_step_inv = 293.89f / 1.8f;
+	// int nb_steps = (int)(delta_angle_encoder * angle_mov_per_step_inv);
+
+	if(abs(nb_steps) > MAX_STEPS_PER_CMD)
+	{
+		if(nb_steps < 0)
+			nb_steps = -MAX_STEPS_PER_CMD;
+		else
+			nb_steps = MAX_STEPS_PER_CMD;
+	}
+
+	if(pitch_done)
+	{
+		// uint32_t nb_steps_cmd = (int)
+		if (sensor_data.feedback_pitch_rops != 1)
+		{
+			uint32_t rops_cmd = ROPS_ENABLE;
+			TransmitCAN(MARIO_ROPS_CMD, (uint8_t*)&rops_cmd, 4, 0);
+			delay_us(100);
+		}
+
+		TransmitCAN(MARIO_PITCH_CMD, (uint8_t*)&nb_steps, 4, 0);
+		pitch_done = 0;
+		delay_us(100);
+	}
+}
+
 void SendPitchAngleCmd(float target_pitch)
 {
+	// Bounds checking
+	// if (target_angle_pales < 180.0f || target_angle_pales > 180.0f)
+	//	return;
+	float target_angle_pales = BoundAngleSemiCircle(target_pitch);
+
 	// Calculate current pitch angle from ABSOLUTE ZERO
 	// float current_pitch_angle_pales = (3.0f / 2.0f) * pitch_to_angle(current_pitch);
-	float current_pitch_angle_pales = (3.0f / 2.0f) * CalcPitchAngle();
+	float angle_pales = CalcPitchAnglePales(FALSE);
+	angle_pales = BoundAngleSemiCircle(angle_pales);
 
 	// Calculate the delta pitch angle for the stepper motor
-	float delta_pitch_angle_pales = target_pitch - current_pitch_angle_pales;
-	float delta_pitch_angle_encodeur = (2.0f / 3.0f) * delta_pitch_angle_pales;
+	float delta_angle_pales = target_angle_pales - angle_pales;
+	delta_angle_pales = BoundAngleSemiCircle(delta_angle_pales);
+
+	static const float angle_pales_to_encoder_angle = (2.0f / 3.0f);
+	float delta_angle_encoder = angle_pales_to_encoder_angle * delta_angle_pales;
 
 	// Convert the target angle to stepper steps
-	const float angle_mov_per_step = 1.8f / 293.89f;
-	int nb_steps = (int)(delta_pitch_angle_encodeur / angle_mov_per_step);
+	// static const float angle_mov_per_step = 1.8f / 293.89f;
+	// int nb_steps = (int)(delta_pitch_angle_encodeur / angle_mov_per_step);
+	static const float angle_mov_per_step_inv = 293.89f / 1.8f;
+	int nb_steps = (int)(delta_angle_encoder * angle_mov_per_step_inv);
 
 	// Set a maximum to the number of steps so that we don't overshoot too much
 	// Plus, its safer in case of angle error
 	//if(abs(nb_steps) > 300) nb_steps = 300;
 	//nb_steps *= -1;
 
-	if(abs(nb_steps) > 300)
+
+	if(abs(nb_steps) > MAX_STEPS_PER_CMD)
 	{
 		if(nb_steps < 0)
-			nb_steps = -300;
+			nb_steps = -MAX_STEPS_PER_CMD;
 		else
-			nb_steps = 300;
+			nb_steps = MAX_STEPS_PER_CMD;
 	}
 	// nb_steps *= -1;
 	// TODO: Add checks and validation of steps
@@ -348,6 +495,7 @@ void FloatToString(float value, int decimal_precision, unsigned char* val)
 {
 	int integer = (int)value;
 	int decimal = (int)((value - (float)integer) * (float)(pow(10, decimal_precision)));
+	decimal = abs(decimal);
 
 	sprintf(val, "%d.%d", integer, decimal);
 }
@@ -454,6 +602,8 @@ uint32_t DoStateInit()
 	flag_acq_interval = 0;
 	flag_rpm_process = 0;
 	flag_can_tx_send = 0;
+
+	b_rops = 0;
 
 	memset(&sensor_data, 0, sizeof(SensorData));
 
@@ -584,8 +734,7 @@ uint32_t DoStateAcquisition()
 
 uint32_t DoStateCheckROPS()
 {
-	uint8_t rops = 0;
-	if (rops)
+	if (b_rops)
 		return STATE_ROPS;
 	else
 		return STATE_MOTOR_CONTROL;
@@ -594,6 +743,13 @@ uint32_t DoStateCheckROPS()
 uint32_t DoStateMotorControl()
 {
 #define MANUAL_MAST 0
+#define TEST_PITCH_AUTO 0
+
+	// Do not control any motor when in ROPS
+	// TODO: (Marc) Maybe only leave mast control enabled ?
+	// if (b_rops)
+	//	return STATE_CAN;
+
 	if (MANUAL_MAST)
 	{
 		uint32_t dir_left = MOTOR_DIRECTION_LEFT;
@@ -639,50 +795,121 @@ uint32_t DoStateMotorControl()
 			TransmitCAN(manual_motor_id, (uint8_t*)&dir_right, 4, 0);
 		}
 	}
+	else if (TEST_PITCH_AUTO)
+	{
+		if (!b_rops)
+		{
+			// Pitch auto control
+			static uint8_t target_changed = 0;
+			if (pb1_update || pb2_update)
+			{
+				target_changed = 1;
+
+				if (sensor_data.feedback_pitch_mode != MOTOR_MODE_AUTOMATIC)
+				{
+					uint32_t pitch_mode = MOTOR_MODE_AUTOMATIC;
+					TransmitCAN(MARIO_PITCH_MODE_CMD, (uint8_t*)&pitch_mode, 4, 0);
+					delay_us(100);
+				}
+			}
+
+			static float target_pitch = 0.0f;
+
+			float target_pitch0 = 0.0f;
+			float target_pitch1 = 10.0f;
+
+			if (pb1_update)
+			{
+				pb1_update = 0;
+				target_pitch = target_pitch0;
+				// SendPitchAngleCmd(target_pitch0);
+			}
+			if (pb2_update)
+			{
+				pb2_update = 0;
+				target_pitch = target_pitch1;
+				// SendPitchAngleCmd(target_pitch1);
+			}
+
+			if (target_changed)
+			{
+				// Compute delta angle from -180 to 180 degrees
+				float delta_angle_pales = CalcPitchAnglePales(TRUE) - target_pitch;
+				delta_angle_pales = BoundAngleSemiCircle(delta_angle_pales);
+
+	#define MIN_ERROR_ANGLE 0.1f
+				if (abs(delta_angle_pales) > 0.1f)
+				{
+					if (pitch_done)
+					{
+						// Small delay inbetween commands for smoothness
+						static uint32_t pitch_done_counter = 0;
+
+						++pitch_done_counter;
+
+	#define PITCH_DONE_WAIT_NUM 20
+						if (pitch_done_counter >= PITCH_DONE_WAIT_NUM)
+						{
+							pitch_done_counter = 0;
+							SendPitchAngleCmd(target_pitch);
+						}
+					}
+				}
+			}
+		}
+	}
 	else
 	{
-		// Pitch auto control
-		static uint8_t target_changed = 0;
-		if (pb1_update || pb2_update)
+		if (pb1_update)
 		{
-			target_changed = 1;
+			pb1_update = 0;
+			// TransmitCAN(manual_motor_id, (uint8_t*)&dir_left, 4, 0);
+			b_rops = 1;
+		}
 
-			if (sensor_data.feedback_pitch_mode != MOTOR_MODE_AUTOMATIC)
-			{
-				uint32_t pitch_mode = MOTOR_MODE_AUTOMATIC;
-				TransmitCAN(MARIO_PITCH_MODE_CMD, (uint8_t*)&pitch_mode, 4, 0);
-				delay_us(100);
-			}
+		if (pb2_update)
+		{
+			pb2_update = 0;
+			// TransmitCAN(manual_motor_id, (uint8_t*)&dir_right, 4, 0);
+			b_rops = 0;
+		}
+
+		// Do not control any motor when in ROPS
+		// TODO: (Marc) Maybe only leave mast control enabled ?
+		if (b_rops)
+			return STATE_CAN;
+
+		if (sensor_data.feedback_pitch_mode != MOTOR_MODE_AUTOMATIC)
+		{
+			float pitch_mode_cmd = MOTOR_MODE_AUTOMATIC;
+			TransmitCAN(MARIO_PITCH_MODE_CMD, (uint8_t*)&pitch_mode_cmd, 4, 0);
+			delay_us(100);
 		}
 
 		static float target_pitch = 0.0f;
 
-		float target_pitch0 = 0.0f;
-		float target_pitch1 = 10.0f;
+		// Compute delta angle from -180 to 180 degrees
+		float delta_angle_pales = CalcPitchAnglePales(TRUE) - target_pitch;
+		delta_angle_pales = BoundAngleSemiCircle(delta_angle_pales);
 
-		if (pb1_update)
+#define MIN_ERROR_ANGLE 0.1f
+		if (abs(delta_angle_pales) > 0.1f)
 		{
-			pb1_update = 0;
-			target_pitch = target_pitch0;
-			// SendPitchAngleCmd(target_pitch0);
-		}
-		if (pb2_update)
-		{
-			pb2_update = 0;
-			target_pitch = target_pitch1;
-			// SendPitchAngleCmd(target_pitch1);
-		}
-
-		if (target_changed)
-		{
-			if (abs(CalcPitchAngle() - target_pitch) > 0.1f)
+			if (pitch_done)
 			{
-				if (pitch_done)
+				// Small delay inbetween commands for smoothness
+				static uint32_t pitch_done_counter = 0;
+
+				++pitch_done_counter;
+
+#define PITCH_DONE_WAIT_NUM 20
+				if (pitch_done_counter >= PITCH_DONE_WAIT_NUM)
 				{
+					pitch_done_counter = 0;
 					SendPitchAngleCmd(target_pitch);
 				}
 			}
-			}
+		}
 	}
 
 	return STATE_CAN;
@@ -691,7 +918,67 @@ uint32_t DoStateMotorControl()
 uint32_t DoStateROPS()
 {
 	// Stay in ROPS
-	return STATE_ROPS;
+	while (b_rops)
+	{
+		delay_us(250);
+
+		// Check for timer flags
+		if (timer_50ms_flag)
+		{
+			timer_50ms_flag = 0;
+
+			// flag_can_tx_send = 1;
+			// flag_rpm_process = 1;
+		}
+		if (timer_100ms_flag)
+		{
+			timer_100ms_flag = 0;
+
+			flag_acq_interval = 1;
+			flag_rpm_process = 1;
+			flag_can_tx_send = 1;
+		}
+		if (timer_500ms_flag)
+		{
+			timer_500ms_flag = 0;
+
+			flag_alive_led = 1;
+			flag_uart_tx_send = 1;
+		}
+
+		// Alive led
+		if (flag_alive_led)
+		{
+			flag_alive_led = 0;
+			HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+		}
+
+		// Check angle is at rops
+#define MAX_ERROR_ROPS 10000
+		// TODO: (Marc) Will not work if value loops around the zero, need proper bounds checking
+		if (abs(sensor_data.pitch_encoder - PITCH_ABSOLUTE_ROPS) > MAX_ERROR_ROPS)
+		{
+			SendPitchROPSCmd();
+		}
+
+		DoStateAcquisition();
+		DoStateMotorControl();
+
+		DoStateCan();
+		DoStateDataLogging();
+		DoStateUartTx();
+	}
+
+	// Exit ROPS state
+	uint32_t rops_cmd = ROPS_DISABLE;
+	TransmitCAN(MARIO_ROPS_CMD, (uint8_t*)&rops_cmd, 4, 0);
+	delay_us(100);
+
+	// uint32_t pitch_mode_cmd = MOTOR_MODE_MANUAL;
+	// TransmitCAN(MARIO_PITCH_MODE_CMD, (uint8_t*)&pitch_mode_cmd, 4, 0);
+	// delay_us(100);
+
+	return STATE_ACQUISITION;
 }
 
 uint32_t DoStateCan()
@@ -714,38 +1001,55 @@ uint32_t DoStateCan()
 	{
 		flag_can_tx_send = 0;
 
+		uint32_t gear_target = 0;
+		TransmitCAN(MARIO_GEAR_TARGET, (uint8_t*)&gear_target, 4, 0);
+		delay_us(50);
+
 		TransmitCAN(MARIO_PITCH_ANGLE, (uint8_t*)&sensor_data.pitch_angle, 4, 0);
-		delay_us(100);
+		delay_us(50);
 
-		TransmitCAN(MARIO_MAST_ANGLE, (uint8_t*)&sensor_data.mast_angle, 4, 0);
-		delay_us(100);
+		// TransmitCAN(MARIO_MAST_ANGLE, (uint8_t*)&sensor_data.mast_angle, 4, 0);
+		// delay_us(50);
 
-		TransmitCAN(MARIO_MAST_ANGLE, (uint8_t*)&sensor_data.vehicle_speed, 4, 0);
-		delay_us(100);
+		// TransmitCAN(MARIO_MAST_ANGLE, (uint8_t*)&sensor_data.vehicle_speed, 4, 0);
+		// delay_us(50);
 
 		TransmitCAN(MARIO_ROTOR_RPM, (uint8_t*)&sensor_data.rotor_rpm, 4, 0);
-		delay_us(100);
+		delay_us(50);
 
 		TransmitCAN(MARIO_WHEEL_RPM, (uint8_t*)&sensor_data.wheel_rpm, 4, 0);
-		delay_us(100);
+		delay_us(50);
 
 		TransmitCAN(MARIO_WIND_DIRECTION, (uint8_t*)&sensor_data.wind_direction, 4, 0);
-		delay_us(100);
+		delay_us(50);
 
 		TransmitCAN(MARIO_WIND_SPEED, (uint8_t*)&sensor_data.wind_speed, 4, 0);
-		delay_us(100);
+		delay_us(50);
 
-		TransmitCAN(MARIO_TORQUE, (uint8_t*)&sensor_data.torque, 4, 0);
-		delay_us(100);
+		// TransmitCAN(MARIO_TORQUE, (uint8_t*)&sensor_data.torque, 4, 0);
+		// delay_us(50);
 
-		TransmitCAN(MARIO_LOADCELL, (uint8_t*)&sensor_data.loadcell, 4, 0);
-		delay_us(100);
+		// TransmitCAN(MARIO_LOADCELL, (uint8_t*)&sensor_data.loadcell, 4, 0);
+		// delay_us(50);
+
+		// TODO: (Marc) Batt voltage + Batt current
+		// TODO: (Marc) Limit switch
+
+		TransmitCAN(MARIO_PITCH_MODE_FEEDBACK, (uint8_t*)&sensor_data.feedback_pitch_mode, 4, 0);
+		delay_us(50);
+
+		TransmitCAN(MARIO_MAST_MODE_FEEDBACK, (uint8_t*)&sensor_data.feedback_mast_mode, 4, 0);
+		delay_us(50);
+
+		TransmitCAN(MARIO_ROPS_FEEDBACK, (uint8_t*)&b_rops, 4, 0);
+		delay_us(50);
 
 		// Also send the turbine rpm value to the drive motor for ROPS detection
 		TransmitCAN(MARIO_MOTOR_ROTOR_RPM, (uint8_t*)&sensor_data.rotor_rpm, 4, 0);
-		delay_us(100);
+		delay_us(50);
 	}
 	*/
+
 
 	return STATE_DATA_LOGGING;
 }
@@ -781,7 +1085,7 @@ uint32_t DoStateUartTx()
 		FloatToString(sensor_data.loadcell, 2, loadcell_str);
 
 		// Compute angle from pitch encoder value
-		float pitch_angle = CalcPitchAngle();
+		float pitch_angle = CalcPitchAnglePales(TRUE);
 		static unsigned char pitch_angle_str[20] = {0};
 		FloatToString(pitch_angle, 2, pitch_angle_str);
 
@@ -792,13 +1096,24 @@ uint32_t DoStateUartTx()
 			HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
 		}
 
+		float tsr = CalcTSR();
+		static unsigned char tsr_str[20] = {0};
+		FloatToString(tsr, 4, tsr_str);
+
+		float pitch_auto_target = CalcPitchAuto();
+		static unsigned char pitch_auto_target_str[20] = {0};
+		FloatToString(pitch_auto_target, 4, pitch_auto_target_str);
 		// unsigned char msg[] = "Hello World! ";
 
 		unsigned char msg[1024] = { 0 };
-		sprintf(msg, "Wind Speed = %s,  Wind Direction = %s,  rotor rpm = %s,  wheel_rpm = %s \n\rPitch = %d,  angle = %s \n\rTorque = %s,  Loadcell = %s \n\r  Mast mode = %d,  Pitch mode = %d \n\r",
-				wind_speed_str, wind_direction_str, rotor_rpm_str, wheel_rpm_str,
+		sprintf(msg, "Wind Speed = %s,  Wind Direction = %s \n\rrotor rpm = %s,  wheel_rpm = %s \n\rPitch = %d,  angle = %s \n\rTorque = %s,  Loadcell = %s \n\rMast mode = %d,  Pitch mode = %d \n\rTSR = %s,  Pitch auto target = %s\n\rROPS = %d,  ROPS drive pitch = %d \n\r",
+				wind_speed_str, wind_direction_str,
+				rotor_rpm_str, wheel_rpm_str,
 				sensor_data.pitch_encoder, pitch_angle_str,
-				torque_str, loadcell_str, sensor_data.feedback_mast_mode, sensor_data.feedback_pitch_mode);
+				torque_str, loadcell_str,
+				sensor_data.feedback_mast_mode, sensor_data.feedback_pitch_mode,
+				tsr_str, pitch_auto_target_str,
+				b_rops, sensor_data.feedback_pitch_rops);
 		//sprintf(msg, "Wind Speed = %d,  Wind Direction = %d \n\r", 1234, 5678);
 
 
@@ -916,6 +1231,33 @@ void ProcessCanMessage()
 	else if (pRxHeader.StdId == BACKPLANE_TOTAL_CURRENT)
 	{
 
+	}
+	else if (pRxHeader.StdId == VOLANT_MANUAL_ROPS_CMD)
+	{
+		uint8_t rops_data = (can_data & 0xFF);
+		if (rops_data == ROPS_ENABLE)
+			b_rops = 1;
+		else if (rops_data == ROPS_DISABLE)
+			b_rops = 0;
+		else
+		{
+			// Unknown value received for ROPS command
+			// Assume it was meant to activate ROPS
+			b_rops = 1;
+		}
+	}
+	else if (pRxHeader.StdId == DRIVEMOTOR_ROPS_FEEDBACK)
+	{
+		uint8_t rops_data = (can_data & 0xFF);
+		sensor_data.feedback_pitch_rops = rops_data;
+		/*
+		if (rops_data == ROPS_ENABLE)
+			sensor_data.feedback_pitch_rops = 1;
+		else if (rops_data == ROPS_DISABLE)
+			sensor_data.feedback_pitch_rops = 0;
+		else
+			sensor_data.feedback_pitch_rops = rops_data;
+		*/
 	}
 	else
 	{
