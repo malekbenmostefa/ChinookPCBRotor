@@ -996,6 +996,70 @@ uint32_t DoStateCan()
 #define MARIO_LIMIT_SWITCH 0x0B
 	*/
 
+	// DEBUG DEBUG -- CAN Volant
+	if (flag_can_tx_send) // Sent every 100ms
+	{
+		flag_can_tx_send = 0;
+
+		static const uint8_t uint_buffer_test[] = { 111, 112, 113, 114, 115, 116, 117, 118, 119, 210 };
+		static const float float_buffer_test[] = { 9.10f, 9.20f, 9.30f, 9.40f, 9.50f, 9.60f, 9.70f, 9.80f, 9.90f };
+
+		uint8_t uint_buffer_index = 0;
+		uint8_t float_buffer_index = 0;
+
+		TransmitCAN(MARIO_GEAR_TARGET, (uint8_t*)&uint_buffer_test[uint_buffer_index++], 4, 0);
+		delay_us(50);
+
+		TransmitCAN(MARIO_PITCH_ANGLE, (uint8_t*)&float_buffer_test[float_buffer_index++], 4, 0);
+		delay_us(50);
+
+		// TransmitCAN(MARIO_MAST_ANGLE, (uint8_t*)&sensor_data.mast_angle, 4, 0);
+		// delay_us(50);
+
+		// TransmitCAN(MARIO_MAST_ANGLE, (uint8_t*)&sensor_data.vehicle_speed, 4, 0);
+		// delay_us(50);
+
+		TransmitCAN(MARIO_ROTOR_RPM, (uint8_t*)&uint_buffer_test[uint_buffer_index++], 4, 0);
+		delay_us(50);
+
+		TransmitCAN(MARIO_WHEEL_RPM, (uint8_t*)&uint_buffer_test[uint_buffer_index++], 4, 0);
+		delay_us(50);
+
+		TransmitCAN(MARIO_WIND_DIRECTION, (uint8_t*)&float_buffer_test[float_buffer_index++], 4, 0);
+		delay_us(50);
+
+		TransmitCAN(MARIO_WIND_SPEED, (uint8_t*)&float_buffer_test[float_buffer_index++], 4, 0);
+		delay_us(50);
+
+		// TransmitCAN(MARIO_TORQUE, (uint8_t*)&sensor_data.torque, 4, 0);
+		// delay_us(50);
+
+		// TransmitCAN(MARIO_LOADCELL, (uint8_t*)&sensor_data.loadcell, 4, 0);
+		// delay_us(50);
+
+		// TODO: (Marc) Batt voltage + Batt current
+		// TODO: (Marc) Limit switch
+
+		static const uint8_t mode_test_manual = MOTOR_MODE_MANUAL;
+		static const uint8_t mode_test_automatic = MOTOR_MODE_AUTOMATIC;
+
+		TransmitCAN(MARIO_PITCH_MODE_FEEDBACK, (uint8_t*)&mode_test_manual, 4, 0);
+		delay_us(50);
+
+		TransmitCAN(MARIO_MAST_MODE_FEEDBACK, (uint8_t*)&mode_test_automatic, 4, 0);
+		delay_us(50);
+
+		// static const uint8_t rops_test = ROPS_ENABLE;
+		static const uint8_t rops_test = 1;
+
+		TransmitCAN(MARIO_ROPS_FEEDBACK, (uint8_t*)&rops_test, 4, 0);
+		delay_us(50);
+
+		// Also send the turbine rpm value to the drive motor for ROPS detection
+		// TransmitCAN(MARIO_MOTOR_ROTOR_RPM, (uint8_t*)&sensor_data.rotor_rpm, 4, 0);
+		// delay_us(50);
+	}
+
 	/*
 	if (flag_can_tx_send) // Sent every 100ms
 	{
