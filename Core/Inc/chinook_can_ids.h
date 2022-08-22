@@ -16,6 +16,7 @@
 // Motor modes
 #define MOTOR_MODE_MANUAL 0x1
 #define MOTOR_MODE_AUTOMATIC 0x2
+#define MOTOR_MODE_TOGGLE 0x10
 
 // Emergency commands
 #define MOTOR_EMERGENCY_STOP_DISABLE 0x1
@@ -115,6 +116,8 @@
 #define MARIO_MAST_MODE_FEEDBACK 0x4D
 #define MARIO_ROPS_FEEDBACK 0x4E
 
+#define MARIO_TIP_SPEED_RATIO 0x4F
+
 // Volant FIFO0 - Priority
 
 #define VOLANT_FIFO0_RX_FILTER_ID_HIGH 0x0000
@@ -151,6 +154,8 @@
 
 #define VOLANT_MANUAL_PITCH_CMD 0x7A
 #define VOLANT_MANUAL_MAST_CMD 0x7B
+
+#define BACKPLANE_DUMMY_TRAFFIC 0x7C
 
 // Drive motor FIFO0 filter
 

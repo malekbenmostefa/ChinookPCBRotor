@@ -105,7 +105,8 @@ uint8_t ws_receive_flag;
 
 uint8_t aRxBuffer[256];
 
-uint8_t ws_rx_byte;
+//uint8_t ws_rx_byte;
+uint8_t ws_rx_byte[4];
 
 uint8_t timer_50ms_flag;
 uint8_t timer_100ms_flag;
@@ -172,6 +173,7 @@ uint32_t DoStateUartTx();
 void DoStateError();
 
 // Pitch auto algorithm
+
 float CalcTSR();
 float CalcPitchAuto();
 
@@ -179,6 +181,7 @@ float CalcPitchAnglePales(uint8_t bound_angle);
 
 void SendPitchROPSCmd();
 void SendPitchAngleCmd(float target_pitch);
+
 
 HAL_StatusTypeDef ADC_SendI2C(uint8_t addr, uint8_t reg, uint16_t data);
 uint16_t ADC_ReadI2C(uint8_t addr, uint8_t reg);
@@ -298,19 +301,6 @@ static float CalcDeltaPitch(uint32_t reference_point)
 float CalcPitchAnglePales(uint8_t bound_angle)
 {
 	float delta_pitch = CalcDeltaPitch(PITCH_ABSOLUTE_ZERO);
-	/*
-	int32_t delta_pitch = (sensor_data.pitch_encoder - PITCH_ABSOLUTE_ZERO);
-	uint32_t abs_delta_pitch = abs(delta_pitch);
-
-	// Adjust the pitch value if greater than half distance around full circle
-	if (abs_delta_pitch >= HALF_MAX_VALUE)
-	{
-		if (delta_pitch < 0)
-			delta_pitch = (MAX_PITCH_VALUE - abs_delta_pitch);
-		else
-			delta_pitch = -(MAX_PITCH_VALUE - abs_delta_pitch);
-	}
-	*/
 
 #define ENCODER_TO_PALES_RATIO (3.0f / 2.0f)
 	static const float PITCH_TO_ANGLE_RATIO = ENCODER_TO_PALES_RATIO * (360.0f / (float)MAX_PITCH_VALUE);
@@ -414,6 +404,7 @@ void SendPitchAngleCmd(float target_pitch)
 	}
 }
 
+
 HAL_StatusTypeDef ADC_SendI2C(uint8_t addr, uint8_t reg, uint16_t data)
 {
 	uint8_t buf[3];
@@ -504,9 +495,6 @@ void FloatToString(float value, int decimal_precision, unsigned char* val)
 
 void ExecuteStateMachine()
 {
-	// Make sure not to saturate cpu with state machine
-	delay_us(250);
-
 	// Check for timer flags
 	if (timer_50ms_flag)
 	{
@@ -515,13 +503,20 @@ void ExecuteStateMachine()
 		// flag_can_tx_send = 1;
 		// flag_rpm_process = 1;
 	}
+	static uint8_t can_tx_flag_counter = 0;
 	if (timer_100ms_flag)
 	{
 		timer_100ms_flag = 0;
 
 		flag_acq_interval = 1;
 		flag_rpm_process = 1;
-		flag_can_tx_send = 1;
+
+		can_tx_flag_counter++;
+		if (can_tx_flag_counter == 2)
+		{
+			can_tx_flag_counter = 0;
+			flag_can_tx_send = 1;
+		}
 	}
 	if (timer_500ms_flag)
 	{
@@ -607,14 +602,14 @@ uint32_t DoStateInit()
 
 	memset(&sensor_data, 0, sizeof(SensorData));
 
-
+	// Causes strange bug where stm32 is still executing interrupts but not main code ....
 	// Start interrupts
-	HAL_UART_Receive_IT(&huart5, &ws_rx_byte, 1);
+	HAL_UART_Receive_IT(&huart5, &ws_rx_byte[0], 1);
 
 	HAL_TIM_Base_Start_IT(&htim2);
-	// HAL_TIM_Base_Start_IT(&htim3);
+	HAL_TIM_Base_Start_IT(&htim3);
 	HAL_TIM_Base_Start_IT(&htim4);
-	HAL_TIM_Base_Start_IT(&htim5);
+    HAL_TIM_Base_Start_IT(&htim5);
 
 
 	// Enable USB TX
@@ -700,8 +695,8 @@ uint32_t DoStateAcquisition()
 #define MAX_LOADCELL 400.0f  // 400 Lbs
 		static const float torque_adc_factor = MAX_TORQUE / ADC_RESOLUTION;
 		static const float loadcell_adc_factor = MAX_LOADCELL / ADC_RESOLUTION;
-		sensor_data.torque = ReadTorqueADC() * torque_adc_factor;
-		sensor_data.loadcell = ReadLoadcellADC() * loadcell_adc_factor;
+		// sensor_data.torque = ReadTorqueADC() * torque_adc_factor;
+		// sensor_data.loadcell = ReadLoadcellADC() * loadcell_adc_factor;
 	}
 
 	if (flag_rpm_process)
@@ -766,7 +761,7 @@ uint32_t DoStateMotorControl()
 			if (pb2_value == 1)
 			{
 				pb2_value = 0;
-				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+				// HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
 
 				TransmitCAN(manual_motor_id, (uint8_t*)&dir_stop, 4, 1);
 			}
@@ -778,7 +773,7 @@ uint32_t DoStateMotorControl()
 			if (pb1_value == 1)
 			{
 				pb1_value = 0;
-				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+				// HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
 
 				TransmitCAN(manual_motor_id, (uint8_t*)&dir_stop, 4, 1);
 			}
@@ -860,6 +855,7 @@ uint32_t DoStateMotorControl()
 	}
 	else
 	{
+		/*
 		if (pb1_update)
 		{
 			pb1_update = 0;
@@ -910,6 +906,7 @@ uint32_t DoStateMotorControl()
 				}
 			}
 		}
+		*/
 	}
 
 	return STATE_CAN;
@@ -917,6 +914,8 @@ uint32_t DoStateMotorControl()
 
 uint32_t DoStateROPS()
 {
+	return STATE_ACQUISITION;
+
 	// Stay in ROPS
 	while (b_rops)
 	{
@@ -956,10 +955,12 @@ uint32_t DoStateROPS()
 		// Check angle is at rops
 #define MAX_ERROR_ROPS 10000
 		// TODO: (Marc) Will not work if value loops around the zero, need proper bounds checking
+		/*
 		if (abs(sensor_data.pitch_encoder - PITCH_ABSOLUTE_ROPS) > MAX_ERROR_ROPS)
 		{
-			SendPitchROPSCmd();
+			/SendPitchROPSCmd();
 		}
+		*/
 
 		DoStateAcquisition();
 		DoStateMotorControl();
@@ -996,7 +997,60 @@ uint32_t DoStateCan()
 #define MARIO_LIMIT_SWITCH 0x0B
 	*/
 
+	if (flag_can_tx_send) // Sent every 100ms
+	{
+		flag_can_tx_send = 0;
+
+		// uint32_t gear = 4;
+		// TransmitCAN(MARIO_GEAR_TARGET, (uint8_t*)&gear, 4, 0);
+		// delay_us(100);
+
+		// float pitch_angle = 23.89f;
+		// TransmitCAN(MARIO_PITCH_ANGLE, (uint8_t*)&pitch_angle, 4, 0);
+		sensor_data.pitch_angle = CalcPitchAnglePales(TRUE);
+		TransmitCAN(MARIO_PITCH_ANGLE, (uint8_t*)&sensor_data.pitch_angle, 4, 0);
+		delay_us(100);
+
+		// float rotor_rpm = 234.6f;
+		// TransmitCAN(MARIO_ROTOR_RPM, (uint8_t*)&rotor_rpm, 4, 0);
+		TransmitCAN(MARIO_ROTOR_RPM, (uint8_t*)&sensor_data.rotor_rpm, 4, 0);
+		delay_us(100);
+
+		// Power = 328.44f
+		// float torque = 0.0f;
+		// TransmitCAN(MARIO_TORQUE, (uint8_t*)&torque, 4, 0);
+		delay_us(100);
+
+		// static float wind_speed = 12.78f;
+		// wind_speed += 0.1f;
+		// TransmitCAN(MARIO_WIND_SPEED, (uint8_t*)&wind_speed, 4, 0);
+		TransmitCAN(MARIO_WIND_SPEED, (uint8_t*)&sensor_data.wind_speed, 4, 0);
+		delay_us(100);
+
+		TransmitCAN(MARIO_WHEEL_RPM, (uint8_t*)&sensor_data.wheel_rpm, 4, 0);
+		delay_us(100);
+
+
+		// float tsr = CalcTSR();
+		float tsr = 12.34f;
+		TransmitCAN(MARIO_TIP_SPEED_RATIO, (uint8_t*)&tsr, 4, 0);
+		delay_us(100);
+
+		// Motor modes feedback to volant
+// #define MARIO_PITCH_MODE_FEEDBACK 0x4C
+// #define MARIO_MAST_MODE_FEEDBACK 0x4D
+		TransmitCAN(MARIO_PITCH_MODE_FEEDBACK, (uint8_t*)&sensor_data.feedback_pitch_mode, 4, 0);
+		delay_us(100);
+
+		TransmitCAN(MARIO_MAST_MODE_FEEDBACK, (uint8_t*)&sensor_data.feedback_mast_mode, 4, 0);
+		delay_us(100);
+
+	}
+
+
+
 	// DEBUG DEBUG -- CAN Volant
+	/*
 	if (flag_can_tx_send) // Sent every 100ms
 	{
 		flag_can_tx_send = 0;
@@ -1019,10 +1073,10 @@ uint32_t DoStateCan()
 		// TransmitCAN(MARIO_MAST_ANGLE, (uint8_t*)&sensor_data.vehicle_speed, 4, 0);
 		// delay_us(50);
 
-		TransmitCAN(MARIO_ROTOR_RPM, (uint8_t*)&uint_buffer_test[uint_buffer_index++], 4, 0);
+		TransmitCAN(MARIO_ROTOR_RPM, (uint8_t*)&float_buffer_test[float_buffer_index++], 4, 0);
 		delay_us(50);
 
-		TransmitCAN(MARIO_WHEEL_RPM, (uint8_t*)&uint_buffer_test[uint_buffer_index++], 4, 0);
+		TransmitCAN(MARIO_WHEEL_RPM, (uint8_t*)&float_buffer_test[float_buffer_index++], 4, 0);
 		delay_us(50);
 
 		TransmitCAN(MARIO_WIND_DIRECTION, (uint8_t*)&float_buffer_test[float_buffer_index++], 4, 0);
@@ -1059,6 +1113,8 @@ uint32_t DoStateCan()
 		// TransmitCAN(MARIO_MOTOR_ROTOR_RPM, (uint8_t*)&sensor_data.rotor_rpm, 4, 0);
 		// delay_us(50);
 	}
+	*/
+
 
 	/*
 	if (flag_can_tx_send) // Sent every 100ms
@@ -1088,6 +1144,11 @@ uint32_t DoStateCan()
 		delay_us(50);
 
 		TransmitCAN(MARIO_WIND_SPEED, (uint8_t*)&sensor_data.wind_speed, 4, 0);
+		delay_us(50);
+
+		static float tsr = 24.1f;
+		tsr += 0.1f;
+		TransmitCAN(MARIO_TIP_SPEED_RATIO, (uint8_t*)&tsr, 4, 0);
 		delay_us(50);
 
 		// TransmitCAN(MARIO_TORQUE, (uint8_t*)&sensor_data.torque, 4, 0);
@@ -1160,13 +1221,13 @@ uint32_t DoStateUartTx()
 			HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
 		}
 
-		float tsr = CalcTSR();
+		// float tsr = CalcTSR();
 		static unsigned char tsr_str[20] = {0};
-		FloatToString(tsr, 4, tsr_str);
+		// FloatToString(tsr, 4, tsr_str);
 
-		float pitch_auto_target = CalcPitchAuto();
+		// float pitch_auto_target = CalcPitchAuto();
 		static unsigned char pitch_auto_target_str[20] = {0};
-		FloatToString(pitch_auto_target, 4, pitch_auto_target_str);
+		// FloatToString(pitch_auto_target, 4, pitch_auto_target_str);
 		// unsigned char msg[] = "Hello World! ";
 
 		unsigned char msg[1024] = { 0 };
@@ -1180,10 +1241,33 @@ uint32_t DoStateUartTx()
 				b_rops, sensor_data.feedback_pitch_rops);
 		//sprintf(msg, "Wind Speed = %d,  Wind Direction = %d \n\r", 1234, 5678);
 
-
 		// char msg[] = "Hello World! \n\r";
 
 		HAL_StatusTypeDef ret = HAL_UART_Transmit(&huart2, msg, strlen(msg), HAL_MAX_DELAY);
+		// HAL_StatusTypeDef ret = HAL_UART_Transmit(&huart2, msg, strlen(msg), 1);
+		if (ret != HAL_OK)
+		{
+			// UART TX Error
+			HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+		}
+
+
+
+		delay_us(200);
+
+		uint32_t can_esr = CAN1->ESR;
+		uint8_t can_rec = (can_esr & CAN_ESR_REC_Msk) >> CAN_ESR_REC_Pos;
+		uint8_t can_tec = (can_esr & CAN_ESR_TEC_Msk) >> CAN_ESR_TEC_Pos;
+		uint8_t can_lec = (can_esr & CAN_ESR_LEC_Msk) >> CAN_ESR_LEC_Pos;
+		uint8_t can_boff = (can_esr & CAN_ESR_BOFF_Msk) >> CAN_ESR_BOFF_Pos;
+		uint8_t can_error_passive = (can_esr & CAN_ESR_EPVF_Msk) >> CAN_ESR_EPVF_Pos;
+		uint8_t can_error_warning = (can_esr & CAN_ESR_EWGF_Msk) >> CAN_ESR_EWGF_Pos;
+
+		unsigned char can_msg[512] = { 0 };
+		sprintf(can_msg, "\n\r\n\rTEC = %d,  REC = %d  \n\rLast Error Code = %d \n\rBOFF = %d,  Error Passive = %d,  Error Warning = %d\n\r",
+				can_tec, can_rec, can_lec, can_boff, can_error_passive, can_error_warning);
+
+		ret = HAL_UART_Transmit(&huart2, can_msg, strlen(can_msg), HAL_MAX_DELAY);
 		// HAL_StatusTypeDef ret = HAL_UART_Transmit(&huart2, msg, strlen(msg), 1);
 		if (ret != HAL_OK)
 		{
@@ -1198,6 +1282,13 @@ uint32_t DoStateUartTx()
 
 void DoStateError()
 {
+	__disable_irq();
+	while (1)
+	{
+		HAL_GPIO_TogglePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin);
+		delay_ms(250);
+	}
+
 	Error_Handler();
 }
 
@@ -1231,8 +1322,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	// rx_buff[index_buff] = ws_rx_byte;
 	//index_buff++;
 
-	rx_buff[index_buff++] = ws_rx_byte;
-	if(ws_rx_byte == '\n')
+	rx_buff[index_buff++] = ws_rx_byte[0];
+	if(ws_rx_byte[0] == '\n')
 	{
 		rx_buff[index_buff] = '\0';
 		index_buff = 0;
@@ -1242,7 +1333,20 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 
     // Restart interrupt for next byte
-    HAL_UART_Receive_IT(&huart5, &ws_rx_byte, 1);
+	HAL_StatusTypeDef ret = HAL_UART_Receive_IT(&huart5, &ws_rx_byte[0], 1);
+	if (ret != HAL_OK)
+	{
+		// Do something to reset the UART ?
+		// HAL_GPIO_WritePin(LED_WARNING_GPIO_Port, LED_WARNING_Pin, GPIO_PIN_SET);
+		if (ret == HAL_BUSY)
+		{
+			// Already waiting for bytes ??
+			HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_SET);
+		}
+	}
+
+	HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_RESET);
+	// HAL_GPIO_WritePin(LED_WARNING_GPIO_Port, LED_WARNING_Pin, GPIO_PIN_RESET);
   }
 }
 
@@ -1358,6 +1462,7 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* hcan)
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef* hcan)
 {
 	// HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_SET);
+	HAL_GPIO_TogglePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin);
 }
 
 /*
@@ -1412,10 +1517,8 @@ HAL_StatusTypeDef TransmitCAN(uint32_t id, uint8_t* buf, uint8_t size, uint8_t w
 	pTxHeader.DLC = size; // Number of bytes to send
 	pTxHeader.TransmitGlobalTime = DISABLE;
 
-	HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
-
 	uint8_t found_mailbox = 0;
-	for (int i = 0; i < 10; ++i)
+	for (int i = 0; i < 25; ++i)
 	{
 		// Check that mailbox is available for tx
 		if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) > 0)
@@ -1427,6 +1530,12 @@ HAL_StatusTypeDef TransmitCAN(uint32_t id, uint8_t* buf, uint8_t size, uint8_t w
 		// for (int j = 0; j < 500; ++j) {}
 		delay_us(50);
 	}
+	if (!found_mailbox)
+	{
+		// HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_SET);
+		HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin);
+	}
+
 	if (with_priority)
 	{
 		// If message is important, make sure no other messages are queud to ensure it will be sent after any other
@@ -1446,12 +1555,15 @@ HAL_StatusTypeDef TransmitCAN(uint32_t id, uint8_t* buf, uint8_t size, uint8_t w
 	HAL_StatusTypeDef ret = HAL_CAN_AddTxMessage(&hcan1, &pTxHeader, buf, &mb);
 	if (ret != HAL_OK)
 	{
-		HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(LED_WARNING_GPIO_Port, LED_WARNING_Pin, GPIO_PIN_SET);
 		return ret;
 	}
 
-	// Update the CAN led
-	HAL_GPIO_WritePin(LED_ERROR_GPIO_Port, LED_ERROR_Pin, GPIO_PIN_RESET);
+	// Successful transmit
+	HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+
+	// Update the error led if had a successful can write
+	HAL_GPIO_WritePin(LED_WARNING_GPIO_Port, LED_WARNING_Pin, GPIO_PIN_RESET);
 	// ToggleLed(LED_CAN);
 	return ret;
 }
@@ -1500,9 +1612,69 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-  //HAL_UART_Receive_IT(&huart5, (uint8_t *)aRxBuffer, sizeof(aRxBuffer));
+
+  // HAL_UART_Receive_IT(&huart5, (uint8_t *)aRxBuffer, sizeof(aRxBuffer));
+  /*
+  HAL_TIM_Base_Start_IT(&htim1);
+  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_Base_Start_IT(&htim4);
+  HAL_TIM_Base_Start_IT(&htim5);
+  */
+
 
   current_state = STATE_INIT;
+
+  /*
+  DoStateInit();
+  delay_us(100);
+
+  while (1)
+  {
+	  delay_ms(2);
+	    // delay_us(100);
+
+	    // Make sure not to saturate cpu with state machine
+		// delay_us(250);
+
+	  __disable_irq();
+
+		// Check for timer flags
+		if (timer_50ms_flag)
+		{
+			timer_50ms_flag = 0;
+
+			// flag_can_tx_send = 1;
+			// flag_rpm_process = 1;
+		}
+		if (timer_100ms_flag)
+		{
+			timer_100ms_flag = 0;
+
+			flag_acq_interval = 1;
+			flag_rpm_process = 1;
+			flag_can_tx_send = 1;
+		}
+		if (timer_500ms_flag)
+		{
+			timer_500ms_flag = 0;
+
+			flag_alive_led = 1;
+			flag_uart_tx_send = 1;
+		}
+
+		// Alive led
+		if (flag_alive_led)
+		{
+			flag_alive_led = 0;
+			HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+		}
+
+		__enable_irq();
+		// HAL_Delay(500);
+		// HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+  }
+  */
 
 
   while (1)
@@ -1727,7 +1899,7 @@ static void MX_CAN1_Init(void)
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = DISABLE;
   hcan1.Init.AutoWakeUp = DISABLE;
-  hcan1.Init.AutoRetransmission = ENABLE;
+  hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
   hcan1.Init.TransmitFifoPriority = ENABLE;
   if (HAL_CAN_Init(&hcan1) != HAL_OK)
@@ -1826,8 +1998,8 @@ static void MX_CAN1_Init(void)
   	{
   		Error_Handler();
   	}
-  	// if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_ERROR_WARNING | CAN_IT_ERROR_PASSIVE) != HAL_OK)
-  	if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
+  	if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_RX_FIFO1_MSG_PENDING | CAN_IT_BUSOFF | CAN_IT_ERROR | CAN_IT_ERROR_WARNING | CAN_IT_ERROR_PASSIVE) != HAL_OK)
+  	// if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
   	{
   		Error_Handler();
   	}
@@ -1984,7 +2156,6 @@ static void MX_TIM1_Init(void)
   }
   /* USER CODE BEGIN TIM1_Init 2 */
 
-  // Start the timer
   HAL_TIM_Base_Start(&htim1);
 
   /* USER CODE END TIM1_Init 2 */
@@ -2380,7 +2551,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     else if (GPIO_Pin == GPIO_PIN_15) // PD_15 -- PB1
     {
     	//HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
-    	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+    	// HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
     	pb1_value = 1;
 
     	pb1_update = 1;
