@@ -276,8 +276,8 @@ float CalcPitchAuto()
 #define MAX_PITCH_VALUE 4194303
 #define HALF_MAX_VALUE 2097152
 
-#define PITCH_ABSOLUTE_ZERO 3628800
-#define PITCH_ABSOLUTE_ROPS 3142633
+#define PITCH_ABSOLUTE_ZERO 1668850
+#define PITCH_ABSOLUTE_ROPS 2520743
 
 #define MAX_STEPS_PER_CMD 500
 
@@ -444,8 +444,12 @@ uint16_t ADC_ReadI2C(uint8_t addr, uint8_t reg)
 
 uint32_t ReadTorqueADC()
 {
-	// TODO: (Marc)
-	return 0;
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, 1);
+	uint16_t adc_result = HAL_ADC_GetValue(&hadc1);
+
+	static const float ADC_TO_TORQUE = (5.0f/5.095f) * 160.0f / 4095.0f;
+	return adc_result * ADC_TO_TORQUE;
 }
 
 uint32_t ReadLoadcellADC()
@@ -463,16 +467,16 @@ uint32_t ReadPitchEncoder()
 
 		HAL_GPIO_WritePin(Pitch_Clock_GPIO_Port, Pitch_Clock_Pin, GPIO_PIN_RESET);
 		// for (int i = 0; i < 40; ++i) {} // Wait 10 us
-		delay_us(10);
+		delay_us(30);
 
 		HAL_GPIO_WritePin(Pitch_Clock_GPIO_Port, Pitch_Clock_Pin, GPIO_PIN_SET);
 		// for (int i = 0; i < 40; ++i) {} // Wait 10 us
-		delay_us(10);
+		delay_us(30);
 
 		pitch_data |= HAL_GPIO_ReadPin(Pitch_Data_GPIO_Port, Pitch_Data_Pin);
 	}
 
-	return pitch_data;
+  	return pitch_data;
 }
 
 uint32_t ReadMastEncoder()
@@ -611,6 +615,8 @@ uint32_t DoStateInit()
 	HAL_TIM_Base_Start_IT(&htim4);
     HAL_TIM_Base_Start_IT(&htim5);
 
+    // Init ADC + calibration
+    //HAL_ADCEx_Calibration_Start(&hadc1);
 
 	// Enable USB TX
 	HAL_GPIO_WritePin(USB_TX_EN_GPIO_Port, USB_TX_EN_Pin, GPIO_PIN_SET);
@@ -675,6 +681,52 @@ uint32_t DoStateAcquisition()
 		}
 	}
 
+	/*
+	static uint8_t rops_hack = 0;
+	if (sensor_data.rotor_rpm >= 100)
+	{
+		// ACTIVATE ROPS
+		rops_hack = 1;
+	}
+
+	static uint8_t first = 1;
+	if (rops_hack && first)
+	{
+		first = 0;
+		rops_hack = 0;
+
+		uint32_t pitch_mode = MOTOR_MODE_AUTOMATIC;
+		TransmitCAN(MARIO_PITCH_MODE_CMD, (uint8_t*)&pitch_mode, 4, 0);
+		delay_us(100);
+
+		HAL_Delay(50);
+
+		// int nb_steps = 12000;
+		for (int i = 0; i < 120; ++i)
+		{
+			uint32_t pitch_mode = MOTOR_MODE_AUTOMATIC;
+			TransmitCAN(MARIO_PITCH_MODE_CMD, (uint8_t*)&pitch_mode, 4, 0);
+			delay_us(500);
+
+			int nb_steps = 100;
+			TransmitCAN(MARIO_PITCH_CMD, (uint8_t*)&nb_steps, 4, 0);
+			delay_us(100);
+
+			HAL_Delay(50);
+		}
+
+		pitch_done = 0;
+		delay_us(100);
+
+		while (1)
+		{
+		}
+
+		return STATE_MOTOR_CONTROL;
+	}
+	*/
+
+
 	if (flag_acq_interval)
 	{
 		flag_acq_interval = 0;
@@ -695,7 +747,7 @@ uint32_t DoStateAcquisition()
 #define MAX_LOADCELL 400.0f  // 400 Lbs
 		static const float torque_adc_factor = MAX_TORQUE / ADC_RESOLUTION;
 		static const float loadcell_adc_factor = MAX_LOADCELL / ADC_RESOLUTION;
-		// sensor_data.torque = ReadTorqueADC() * torque_adc_factor;
+		sensor_data.torque = ReadTorqueADC() * torque_adc_factor;
 		// sensor_data.loadcell = ReadLoadcellADC() * loadcell_adc_factor;
 	}
 
@@ -739,6 +791,7 @@ uint32_t DoStateMotorControl()
 {
 #define MANUAL_MAST 0
 #define TEST_PITCH_AUTO 0
+#define TEST_AUTO_ROPS 1
 
 	// Do not control any motor when in ROPS
 	// TODO: (Marc) Maybe only leave mast control enabled ?
@@ -850,6 +903,108 @@ uint32_t DoStateMotorControl()
 						}
 					}
 				}
+			}
+		}
+	}
+	else if (TEST_AUTO_ROPS)
+	{
+		// if (!b_rops)
+		{
+			// Pitch auto control
+			static uint8_t target_changed = 0;
+			if (pb1_update || pb2_update)
+			{
+				target_changed = 1;
+
+				if (sensor_data.feedback_pitch_mode != MOTOR_MODE_AUTOMATIC)
+				{
+					uint32_t pitch_mode = MOTOR_MODE_AUTOMATIC;
+					TransmitCAN(MARIO_PITCH_MODE_CMD, (uint8_t*)&pitch_mode, 4, 0);
+					delay_us(100);
+				}
+			}
+
+			static float target_pitch = 0.0f;
+			static uint8_t target_drapeau = 0;
+
+			// float target_pitch0 = 0.0f;
+			// float target_pitch1 = 10.0f;
+
+			if (pb1_update)
+			{
+				pb1_update = 0;
+				// target_pitch = target_pitch0;
+				target_drapeau = 1;
+				// b_drapeau = 1;
+				// SendPitchAngleCmd(target_pitch0);
+			}
+			if (pb2_update)
+			{
+				pb2_update = 0;
+				// target_pitch = target_pitch1;
+				target_drapeau = 0;
+				// b_drapeau = 0;
+				// SendPitchAngleCmd(target_pitch1);
+			}
+
+			if (target_changed)
+			{
+				if (target_drapeau)
+				{
+#define MAX_ERROR_ROPS 10000
+					if (abs(sensor_data.pitch_encoder - PITCH_ABSOLUTE_ROPS) > MAX_ERROR_ROPS)
+					{
+						SendPitchROPSCmd();
+					}
+				}
+				else
+				{
+					float delta_angle_pales = CalcPitchAnglePales(TRUE) - 0.0f;
+					delta_angle_pales = BoundAngleSemiCircle(delta_angle_pales);
+
+#define MIN_ERROR_ANGLE 0.1f
+					if (abs(delta_angle_pales) > 0.1f)
+					{
+						if (pitch_done)
+						{
+							// Small delay inbetween commands for smoothness
+							static uint32_t pitch_done_counter = 0;
+							++pitch_done_counter;
+
+#define PITCH_DONE_WAIT_NUM 6
+							if (pitch_done_counter >= PITCH_DONE_WAIT_NUM)
+							{
+								pitch_done_counter = 0;
+								SendPitchAngleCmd(target_pitch);
+							}
+						}
+
+					}
+				}
+				/*
+				// Compute delta angle from -180 to 180 degrees
+				float delta_angle_pales = CalcPitchAnglePales(TRUE) - target_pitch;
+				delta_angle_pales = BoundAngleSemiCircle(delta_angle_pales);
+
+	#define MIN_ERROR_ANGLE 0.1f
+				if (abs(delta_angle_pales) > 0.1f)
+				{
+					if (pitch_done)
+					{
+						// Small delay inbetween commands for smoothness
+						static uint32_t pitch_done_counter = 0;
+
+						++pitch_done_counter;
+
+	#define PITCH_DONE_WAIT_NUM 20
+						if (pitch_done_counter >= PITCH_DONE_WAIT_NUM)
+						{
+							pitch_done_counter = 0;
+							SendPitchAngleCmd(target_pitch);
+						}
+					}
+				}
+				*/
 			}
 		}
 	}
@@ -1016,6 +1171,8 @@ uint32_t DoStateCan()
 		TransmitCAN(MARIO_ROTOR_RPM, (uint8_t*)&sensor_data.rotor_rpm, 4, 0);
 		delay_us(100);
 
+
+
 		// Power = 328.44f
 		// float torque = 0.0f;
 		// TransmitCAN(MARIO_TORQUE, (uint8_t*)&torque, 4, 0);
@@ -1024,18 +1181,26 @@ uint32_t DoStateCan()
 		// static float wind_speed = 12.78f;
 		// wind_speed += 0.1f;
 		// TransmitCAN(MARIO_WIND_SPEED, (uint8_t*)&wind_speed, 4, 0);
-		TransmitCAN(MARIO_WIND_SPEED, (uint8_t*)&sensor_data.wind_speed, 4, 0);
+#define KNOTS_TO_MS 0.514444f
+		float wind_speed_ms = KNOTS_TO_MS * sensor_data.wind_speed;
+		TransmitCAN(MARIO_WIND_SPEED, (uint8_t*)&wind_speed_ms, 4, 0);
 		delay_us(100);
 
 		TransmitCAN(MARIO_WHEEL_RPM, (uint8_t*)&sensor_data.wheel_rpm, 4, 0);
 		delay_us(100);
 
 
-		// float tsr = CalcTSR();
-		float tsr = 12.34f;
+		float tsr = CalcTSR();
+		// float tsr = 12.34f;
+
 		TransmitCAN(MARIO_TIP_SPEED_RATIO, (uint8_t*)&tsr, 4, 0);
 		delay_us(100);
 
+		float wind_dir = sensor_data.wind_direction - 120.0f;
+		TransmitCAN(MARIO_WIND_DIRECTION, (uint8_t*)&wind_dir, 4, 0);
+		delay_us(100);
+
+		/*
 		// Motor modes feedback to volant
 // #define MARIO_PITCH_MODE_FEEDBACK 0x4C
 // #define MARIO_MAST_MODE_FEEDBACK 0x4D
@@ -1044,6 +1209,9 @@ uint32_t DoStateCan()
 
 		TransmitCAN(MARIO_MAST_MODE_FEEDBACK, (uint8_t*)&sensor_data.feedback_mast_mode, 4, 0);
 		delay_us(100);
+		*/
+
+
 
 	}
 
@@ -1184,11 +1352,151 @@ uint32_t DoStateDataLogging()
 	return STATE_UART_TX;
 }
 
+static void TransmitDataAcq(int id, int* data)
+{
+	unsigned char msg_data[12];
+
+	msg_data[0] = 0x77;
+	msg_data[1] = 0x11;
+
+	msg_data[2] = id & 0xFF;
+	msg_data[3] = (id & 0xFF00) >> 8;
+
+	msg_data[4] = (*data & 0xFF);
+	msg_data[5] = (*data & 0xFF00) >> 8;
+	msg_data[6] = (*data & 0xFF0000) >> 16;
+	msg_data[7] = (*data & 0xFF000000) >> 24;
+
+	msg_data[8] = 0;
+	msg_data[9] = 0;
+	msg_data[10] = 0;
+	msg_data[11] = 0;
+
+	HAL_StatusTypeDef ret = HAL_UART_Transmit(&huart2, &msg_data, sizeof(msg_data), 1);
+
+	// unsigned char msg[1024] = { 0 };
+	// HAL_StatusTypeDef ret = HAL_UART_Transmit(&huart2, msg, strlen(msg), HAL_MAX_DELAY);
+	// HAL_StatusTypeDef ret = HAL_UART_Transmit(&huart2, msg, strlen(msg), 1);
+	if (ret != HAL_OK)
+	{
+		// UART TX Error
+		HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+	}
+	delay_us(200);
+}
+
+static void UartTxAcquisition()
+{
+	// float data1 = 12.45f;
+	TransmitDataAcq(1, (int*)&sensor_data.pitch_angle);
+	delay_us(10);
+
+#define KNOTS_TO_MS 0.514444f
+	float wind_speed_ms = KNOTS_TO_MS * sensor_data.wind_speed;
+	TransmitDataAcq(2, (int*)&wind_speed_ms);
+	delay_us(10);
+
+	float wind_dir_adj = sensor_data.wind_direction - 120.0f;
+	TransmitDataAcq(3, (int*)&wind_dir_adj);
+	delay_us(10);
+
+	TransmitDataAcq(4, (int*)&sensor_data.rotor_rpm);
+	delay_us(10);
+
+	TransmitDataAcq(5, (int*)&sensor_data.wheel_rpm);
+	delay_us(10);
+
+	float tsr2 = CalcTSR();
+	TransmitDataAcq(6, (int*)&tsr2);
+	delay_us(10);
+
+	TransmitDataAcq(7, (int*)&sensor_data.torque);
+	delay_us(10);
+
+	return;
+	//
+	// 1 : Pitch angle
+	// 2 : Wind Speed
+	// 3 : Wind Direction
+	// 4 : Rotor RPM
+	// 5 : Wheel RPM
+	// 6 : TSR
+	//
+	//sprintf(msg, "Wind Speed = %d,  Wind Direction = %d \n\r", 1234, 5678);
+
+	// char msg[] = "Hello World! \n\r";
+
+	typedef union Trame_
+	{
+	  struct
+	  {
+	    uint16_t header;
+	    uint16_t id;
+	    // uint8_t data[4];
+	    float data;
+	    uint8_t crc;
+	    uint8_t padding[3];
+	  };
+	  uint8_t trame_data[12];
+	} Trame;
+
+	struct DataTemp
+	{
+		Trame pitch_angle_msg;
+		Trame wind_speed_msg;
+		Trame wind_direction_msg;
+		Trame rotor_rpm_msg;
+		Trame wheel_rpm_msg;
+		Trame tsr_msg;
+	} msg_data;
+
+	msg_data.pitch_angle_msg.header = 0x1177;
+	msg_data.wind_speed_msg.header = 0x1177;
+	msg_data.wind_direction_msg.header = 0x1177;
+	msg_data.rotor_rpm_msg.header = 0x1177;
+	msg_data.wheel_rpm_msg.header = 0x1177;
+	msg_data.tsr_msg.header = 0x1177;
+
+	msg_data.pitch_angle_msg.id = 1;
+	msg_data.wind_speed_msg.id = 2;
+	msg_data.wind_direction_msg.id = 3;
+	msg_data.rotor_rpm_msg.id = 4;
+	msg_data.wheel_rpm_msg.id = 5;
+	msg_data.tsr_msg.id = 6;
+
+	msg_data.pitch_angle_msg.data = sensor_data.pitch_angle;
+	msg_data.wind_speed_msg.data = sensor_data.wind_speed;
+	msg_data.wind_direction_msg.data = sensor_data.wind_direction;
+	msg_data.rotor_rpm_msg.data = sensor_data.rotor_rpm;
+	msg_data.wheel_rpm_msg.data = sensor_data.wheel_rpm;
+	float tsr = CalcTSR();
+	tsr = 12.78f;
+	msg_data.tsr_msg.data = tsr;
+
+	// uint32_t header = 0x1177;
+
+	HAL_StatusTypeDef ret = HAL_UART_Transmit(&huart2, &msg_data, sizeof(msg_data), 1);
+
+	// unsigned char msg[1024] = { 0 };
+	// HAL_StatusTypeDef ret = HAL_UART_Transmit(&huart2, msg, strlen(msg), HAL_MAX_DELAY);
+	// HAL_StatusTypeDef ret = HAL_UART_Transmit(&huart2, msg, strlen(msg), 1);
+	if (ret != HAL_OK)
+	{
+		// UART TX Error
+		HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+	}
+	delay_us(200);
+}
+
 uint32_t DoStateUartTx()
 {
 	if (flag_uart_tx_send)
 	{
 		flag_uart_tx_send = 0;
+
+		UartTxAcquisition();
+		return STATE_ACQUISITION;
+
 
 		//HAL_GPIO_TogglePin(LED_CANB_GPIO_Port, LED_CANB_Pin);
 		// HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
@@ -1231,7 +1539,7 @@ uint32_t DoStateUartTx()
 		// unsigned char msg[] = "Hello World! ";
 
 		unsigned char msg[1024] = { 0 };
-		sprintf(msg, "Wind Speed = %s,  Wind Direction = %s \n\rrotor rpm = %s,  wheel_rpm = %s \n\rPitch = %d,  angle = %s \n\rTorque = %s,  Loadcell = %s \n\rMast mode = %d,  Pitch mode = %d \n\rTSR = %s,  Pitch auto target = %s\n\rROPS = %d,  ROPS drive pitch = %d \n\r",
+		sprintf(msg, "Wind Speed = %s,  Wind Direction = %s \n\rotor rpm = %s,  wheel_rpm = %s \n\rPitch = %d,  angle = %s \n\rTorque = %s,  Loadcell = %s \n\rMast mode = %d,  Pitch mode = %d \n\rTSR = %s,  Pitch auto target = %s\n\rROPS = %d,  ROPS drive pitch = %d \n\r",
 				wind_speed_str, wind_direction_str,
 				rotor_rpm_str, wheel_rpm_str,
 				sensor_data.pitch_encoder, pitch_angle_str,
@@ -1264,8 +1572,10 @@ uint32_t DoStateUartTx()
 		uint8_t can_error_warning = (can_esr & CAN_ESR_EWGF_Msk) >> CAN_ESR_EWGF_Pos;
 
 		unsigned char can_msg[512] = { 0 };
-		sprintf(can_msg, "\n\r\n\rTEC = %d,  REC = %d  \n\rLast Error Code = %d \n\rBOFF = %d,  Error Passive = %d,  Error Warning = %d\n\r",
-				can_tec, can_rec, can_lec, can_boff, can_error_passive, can_error_warning);
+		static int test = 0;
+		++test;
+		sprintf(can_msg, "\n\r\n\rTEC = %d,  REC = %d  \n\rLast Error Code = %d \n\rBOFF = %d,  Error Passive = %d,  Error Warning = %d\n\r test = %d",
+				can_tec, can_rec, can_lec, can_boff, can_error_passive, can_error_warning, test);
 
 		ret = HAL_UART_Transmit(&huart2, can_msg, strlen(can_msg), HAL_MAX_DELAY);
 		// HAL_StatusTypeDef ret = HAL_UART_Transmit(&huart2, msg, strlen(msg), 1);
@@ -1426,6 +1736,10 @@ void ProcessCanMessage()
 		else
 			sensor_data.feedback_pitch_rops = rops_data;
 		*/
+	}
+	else if (pRxHeader.StdId == BACKPLANE_DUMMY_TRAFFIC_MARIO)
+	{
+		// Dummy traffic
 	}
 	else
 	{
@@ -1897,7 +2211,7 @@ static void MX_CAN1_Init(void)
   hcan1.Init.TimeSeg1 = CAN_BS1_11TQ;
   hcan1.Init.TimeSeg2 = CAN_BS2_4TQ;
   hcan1.Init.TimeTriggeredMode = DISABLE;
-  hcan1.Init.AutoBusOff = DISABLE;
+  hcan1.Init.AutoBusOff = ENABLE;
   hcan1.Init.AutoWakeUp = DISABLE;
   hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
@@ -1998,7 +2312,8 @@ static void MX_CAN1_Init(void)
   	{
   		Error_Handler();
   	}
-  	if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_RX_FIFO1_MSG_PENDING | CAN_IT_BUSOFF | CAN_IT_ERROR | CAN_IT_ERROR_WARNING | CAN_IT_ERROR_PASSIVE) != HAL_OK)
+  	// if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_RX_FIFO1_MSG_PENDING | CAN_IT_BUSOFF | CAN_IT_ERROR | CAN_IT_ERROR_WARNING | CAN_IT_ERROR_PASSIVE) != HAL_OK)
+    if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_RX_FIFO1_MSG_PENDING) != HAL_OK)
   	// if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
   	{
   		Error_Handler();
