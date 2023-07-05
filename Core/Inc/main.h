@@ -78,6 +78,7 @@ typedef struct SensorData_{
 	float wheel_rpm;
 	float rotor_rpm;
 	float torque;
+	float power;
 	float loadcell;
 	float wind_direction;
 	float wind_speed;
@@ -127,7 +128,11 @@ extern uint8_t timer_100ms_flag;
 extern uint8_t timer_500ms_flag;
 
 // Weather station
+<<<<<<< HEAD
 extern uint8_t rx_buff[64];
+=======
+extern uint8_t rx_buff[128];
+>>>>>>> d26881b8c257761095f66bedb84372fa4138745f
 extern uint8_t index_buff;
 extern uint8_t ws_receive_flag;
 
@@ -137,6 +142,11 @@ extern uint8_t pb2_value;
 extern uint8_t pb1_update;
 extern uint8_t pb2_update;
 
+<<<<<<< HEAD
+=======
+extern float pitch_auto_target;
+extern float pitch_rops_target;
+>>>>>>> d26881b8c257761095f66bedb84372fa4138745f
 extern uint8_t pitch_done;
 extern uint8_t b_rops;
 
@@ -217,6 +227,11 @@ void SendPitchCmdCan(int nb_steps);
 #define FALSE 0
 #define TRUE 1
 
+<<<<<<< HEAD
+=======
+#define MIN_EPSILON 1e-6
+
+>>>>>>> d26881b8c257761095f66bedb84372fa4138745f
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
