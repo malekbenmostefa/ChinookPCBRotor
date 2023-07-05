@@ -385,7 +385,7 @@ void UART5_IRQHandler(void)
   /* USER CODE END UART5_IRQn 0 */
   HAL_UART_IRQHandler(&huart5);
   /* USER CODE BEGIN UART5_IRQn 1 */
-/*
+
   HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
 
   	//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
@@ -409,7 +409,7 @@ void UART5_IRQHandler(void)
   		  //__HAL_UART_SEND_REQ(&huart4, UART_RXDATA_FLUSH_REQUEST);
   		  //__HAL_UART_ENABLE_IT(&huart4,UART_IT_ORE);
   		}
-*/
+
   /* USER CODE END UART5_IRQn 1 */
 }
 
