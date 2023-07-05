@@ -54,10 +54,31 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+
+extern ADC_HandleTypeDef hadc1;
+
+extern CAN_HandleTypeDef hcan1;
+
+extern I2C_HandleTypeDef hi2c1;
+extern I2C_HandleTypeDef hi2c3;
+
+extern SPI_HandleTypeDef hspi2;
+
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim4;
+extern TIM_HandleTypeDef htim5;
+
+extern UART_HandleTypeDef huart5;
+extern UART_HandleTypeDef huart2;
+
+
 typedef struct SensorData_{
 	float wheel_rpm;
 	float rotor_rpm;
 	float torque;
+	float power;
 	float loadcell;
 	float wind_direction;
 	float wind_speed;
@@ -83,6 +104,7 @@ typedef struct SensorData_{
 
 extern SensorData sensor_data;
 
+/*
 extern uint32_t wheel_rpm_counter;
 extern uint32_t rotor_rpm_counter;
 extern uint32_t rpm_counter_time;
@@ -95,6 +117,37 @@ extern uint8_t ws_receive_flag;
 extern uint8_t timer_50ms_flag;
 extern uint8_t timer_100ms_flag;
 extern uint8_t timer_500ms_flag;
+*/
+
+extern uint32_t wheel_rpm_counter;
+extern uint32_t rotor_rpm_counter;
+// extern uint32_t rpm_counter_time;
+
+extern uint8_t timer_50ms_flag;
+extern uint8_t timer_100ms_flag;
+extern uint8_t timer_500ms_flag;
+
+// Weather station
+extern uint8_t rx_buff[128];
+extern uint8_t index_buff;
+extern uint8_t ws_receive_flag;
+
+// Pushbuttons
+extern uint8_t pb1_value;
+extern uint8_t pb2_value;
+extern uint8_t pb1_update;
+extern uint8_t pb2_update;
+
+extern float pitch_auto_target;
+extern float pitch_rops_target;
+extern uint8_t pitch_done;
+extern uint8_t b_rops;
+
+void delay_us(uint16_t delay16_us);
+void delay_ms(uint16_t delay16_ms);
+
+void SendROPSCmdCan(uint32_t rops_cmd);
+void SendPitchCmdCan(int nb_steps);
 
 /* USER CODE END EFP */
 
@@ -109,10 +162,10 @@ extern uint8_t timer_500ms_flag;
 #define LIMIT2_EXTI_IRQn EXTI4_IRQn
 #define Pitch_Data_Pin GPIO_PIN_5
 #define Pitch_Data_GPIO_Port GPIOE
-#define Mast_Clock_Pin GPIO_PIN_5
-#define Mast_Clock_GPIO_Port GPIOA
 #define Mast_Data_Pin GPIO_PIN_6
 #define Mast_Data_GPIO_Port GPIOA
+#define Mast_Clock_Pin GPIO_PIN_7
+#define Mast_Clock_GPIO_Port GPIOA
 #define USB_RESET_Pin GPIO_PIN_4
 #define USB_RESET_GPIO_Port GPIOC
 #define USB_TX_EN_Pin GPIO_PIN_5
@@ -161,6 +214,13 @@ extern uint8_t timer_500ms_flag;
 #define Wheel_RPM_GPIO_Port GPIOE
 #define Wheel_RPM_EXTI_IRQn EXTI1_IRQn
 /* USER CODE BEGIN Private defines */
+
+#define PI 3.1415926535f
+
+#define FALSE 0
+#define TRUE 1
+
+#define MIN_EPSILON 1e-6
 
 /* USER CODE END Private defines */
 

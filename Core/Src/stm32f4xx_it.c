@@ -385,16 +385,19 @@ void UART5_IRQHandler(void)
   /* USER CODE END UART5_IRQn 0 */
   HAL_UART_IRQHandler(&huart5);
   /* USER CODE BEGIN UART5_IRQn 1 */
-/*
-  HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+
+  //HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
 
   	//HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
   		if ((UART5->SR & UART_IT_RXNE)) {
+  			if (index_buff >= 128)
+  				index_buff = 0;
   			uint8_t rbyte = huart5.Instance->DR;
   			rx_buff[index_buff] = rbyte;
   			index_buff++;
   			if(rbyte == '$')
   			{
+  				// HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
   				ws_receive_flag = 1;
   			}
 
@@ -409,7 +412,7 @@ void UART5_IRQHandler(void)
   		  //__HAL_UART_SEND_REQ(&huart4, UART_RXDATA_FLUSH_REQUEST);
   		  //__HAL_UART_ENABLE_IT(&huart4,UART_IT_ORE);
   		}
-*/
+
   /* USER CODE END UART5_IRQn 1 */
 }
 
