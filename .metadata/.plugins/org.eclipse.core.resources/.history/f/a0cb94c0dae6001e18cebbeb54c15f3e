@@ -1,0 +1,41 @@
+/**
+ ******************************************************************************
+ * File Name          : pitch.h
+ * Description        :
+ * Created            : Mar 8, 2024
+ * Author             : Malek Benmostefa et Cedric Verdi
+ ******************************************************************************
+ */
+
+/* Prevent recursive inclusion -----------------------------------------------*/
+#ifndef __PITCH_H__
+#define __PITCH_H__
+
+/* Includes ------------------------------------------------------------------*/
+#include <stdint.h>
+#include "stm32f4xx_hal.h"
+
+/* Defines -------------------------------------------------------------------*/
+#define RESOLUTION 3600 //(3600 par defaut)
+
+/* Type definitions ----------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
+/* Function prototypes ------------------------------------------------------ */
+
+/**
+ * @brief  Fonction qui converti ue tensaion analogique en degre.
+ * @param  None
+ * @retval None
+ */
+float conversion_volt_angle(float volt, uint8_t resolution);
+
+/**
+ * @brief  Fonction qui converti ue tensaion analogique en degre.
+ * @param  None
+ * @retval None
+ */
+
+float conversion_ADC(float volt, uint8_t resolution);
+
+#endif
