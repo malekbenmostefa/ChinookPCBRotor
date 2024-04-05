@@ -338,6 +338,10 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=OJGUPLHJ
 
+[GeneratedDocument1]
+DocumentPath=Project Outputs for chinook_pcb_rotor\Design Rule Check - chinook_pcb_rotor.html
+DItemRevisionGUID=
+
 [Configuration1]
 Name=Sources
 ParameterCount=0
