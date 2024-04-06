@@ -58,9 +58,9 @@
 #define MODE_SET_MODE					0x0C	// Change Mode Command
 #define MODE_CHANGE_POWER_UP			0x0D	// Change Power Up Mode Command
 #define MODE_RESET						0x0E	// Reset Command
-#define MODE_SET_RESOLUTION				0x10	// Loopback Mode
-#define MODE_READ_MODE					0x11	// Off line Command
-#define MODE_SET_MODE					0x0F	// Change Baud Rate Command (temporary)
+#define MODE_LOOPBACK					0x10	// Loopback Mode
+#define MODE_OFF_LINE					0x11	// Off line Command
+#define MODE_BAUD_RATE					0x0F	// Change Baud Rate Command (temporary)
 
 //SEI Mode
 #define MODE_REV						0x0		// 1 = Position increase counter clockwise, 0 = Position increase clockwise
@@ -84,14 +84,24 @@
 #define BR_57600						0x01	// Baud Rate at 57600
 #define BR_115200						0x00	// Baud Rate at 115200
 
+//Baud Rate Commands
+#define SINGLE_TURN_MODE				0
+#define MULTI_TURN_MODE					1
 
 /* Type definitions ----------------------------------------------------------*/
-uint8_t rx_buffer[100];
-
 uint8_t mode_turn = 0;
-uint32_t abs_position_single = 0; 	// absolute position  bytes
-uint32_t abs_position_multi = 0; 	// absolute position 4 bytes
-uint32_t serial_number = 0; 		// serial number 4 bytes
+
+uint8_t checksum[1];
+
+uint8_t position_rx_buff[2];
+uint8_t position_time_rx_buff[4];
+uint8_t position_time_status_rx_buff[5];
+
+uint8_t serial_number_rx_buff[5];
+uint8_t address_rx_buff[2];
+uint8_t factory_info_rx_buff[15];
+uint8_t resolution_rx_buff[3];
+uint8_t mode_rx_buff[3];
 
 uint8_t busy_line_state = 0;
 
@@ -121,9 +131,10 @@ uint8_t pitch_send_SB_cmd(UART_HandleTypeDef *huart, uint8_t *request);
  *			In multi-turn mode, the 32 bit counter is reset, but not stored in EEPROM. This is effective until a
  *			reset occurs or a “Set Origin” or a “Set Absolute Position” command is received.
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_set_origin(UART_HandleTypeDef *huart);
+uint8_t pitch_set_origin(UART_HandleTypeDef *huart, uint8_t addr);
 
 /**
  * @brief  Sets the given absolute position (at the current resolution) at the current position.
@@ -132,16 +143,20 @@ uint8_t pitch_set_origin(UART_HandleTypeDef *huart);
  *			In multi-turn mode, the 32 bit counter is set, but not stored in EEPROM. This is effective until a
  *			reset occurs or a “Set Origin” or a “Set Absolute Position” command is received.
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
+ * @param  uint8_t turn_mode
+ * @param  uint8_t *position
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_set_absolute_position(UART_HandleTypeDef *huart);
+uint8_t pitch_set_absolute_position(UART_HandleTypeDef *huart, uint8_t addr, uint8_t turn_mode, uint8_t *position);
 
 /**
  * @brief  Read the Serial Number of a specific encoder
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_read_serial_number(UART_HandleTypeDef *huart);
+uint8_t pitch_read_serial_number(UART_HandleTypeDef *huart, uint8_t addr);
 
 /**
  * @brief  The encoder does a logical AND of its serial number with the mask supplied; the result is
@@ -149,9 +164,12 @@ uint8_t pitch_read_serial_number(UART_HandleTypeDef *huart);
  *		   byte is received. Otherwise the busy line is released. This command is used to determine if an
  *         encoder with a particular serial number is present on the bus.
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
+ * @param  uint8_t *serial_number
+ * @param  uint8_t *mask
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_check_serial_number(UART_HandleTypeDef *huart);
+uint8_t pitch_check_serial_number(UART_HandleTypeDef *huart, uint8_t addr, uint8_t *serial_number, uint8_t *mask);
 
 /**
  * @brief  The encoder does a logical AND of its serial number with the mask supplied; the result is
@@ -159,110 +177,132 @@ uint8_t pitch_check_serial_number(UART_HandleTypeDef *huart);
  *		   another byte is received. If they match the busy line is released. This is useful to determine if an
  *		   encoder, whose serial number is known, is the only one on the bus.
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
+ * @param  uint8_t *serial_number
+ * @param  uint8_t *mask
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_fail_serial_number(UART_HandleTypeDef *huart);
+uint8_t pitch_fail_serial_number(UART_HandleTypeDef *huart, uint8_t addr, uint8_t *serial_number, uint8_t *mask);
 
 /**
  * @brief  The encoder compares its serial number with the one supplied; if they match, it returns its address
  *		   (0 to E). Otherwise, it returns nothing.
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
+ * @param  uint8_t *serial_number
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_get_address(UART_HandleTypeDef *huart);
+uint8_t pitch_get_address(UART_HandleTypeDef *huart, uint8_t addr, uint8_t *serial_number);
 
 /**
  * @brief  The encoder compares its serial number with the one supplied; if they match, it assigns itself the
  *		   address supplied (must be between 0 and E). The new address is stored in EEPROM, therefore, it
  * 		   will be effective after resets and power downs.
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
+ * @param  uint8_t *serial_number
+ * @param  uint8_t new_addr
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_assign_address(UART_HandleTypeDef *huart);
+uint8_t pitch_assign_address(UART_HandleTypeDef *huart, uint8_t addr, uint8_t *serial_number, uint8_t new_addr);
 
 /**
  * @brief  Read the factory info : model number, version, configuration, serial
  *		   number, month, day, year
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_read_factory_info(UART_HandleTypeDef *huart);
+uint8_t pitch_read_factory_info(UART_HandleTypeDef *huart, uint8_t addr);
 
 /**
  * @brief  Resolution MS byte, resolution LS byte and checksum if command is successful.
  *		   A zero value means 16 bit resolution.
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_read_resolution(UART_HandleTypeDef *huart);
+uint8_t pitch_read_resolution(UART_HandleTypeDef *huart, uint8_t addr);
 
 /**
  * @brief  The resolution can be any number between 0 and FFFF, 0 is for full 16 bit position. However, the
  *		   accuracy is only guaranteed to 12 bits. The new resolution is stored in EEPROM, therefore, it will be
  *		   effective after resets and power downs.
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
+ * @param  uint8_t *resolution
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_change_resolution(UART_HandleTypeDef *huart);
+uint8_t pitch_change_resolution(UART_HandleTypeDef *huart, uint8_t addr, uint8_t *resolution);
 
 /**
  * @brief  Read the present mode settings.
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_read_mode(UART_HandleTypeDef *huart);
+uint8_t pitch_read_mode(UART_HandleTypeDef *huart, uint8_t addr);
 
 /**
  * @brief  The mode is changed temporarily and will be effective until the encoder is reset, power down, or
  *		   another mode change command is received. It is not stored in the EEPROM.
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
+ * @param  uint8_t mode
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_change_mode(UART_HandleTypeDef *huart);
+uint8_t pitch_change_mode(UART_HandleTypeDef *huart, uint8_t addr, uint8_t mode);
 
 /**
  * @brief  Same as “Change Mode Command” described above, except the mode is stored in EEPROM,
  *		   therefore it will be effective across resets and power cycles.
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
+ * @param  uint8_t mode
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_change_power_up_mode(UART_HandleTypeDef *huart);
+uint8_t pitch_change_power_up_mode(UART_HandleTypeDef *huart, uint8_t addr, uint8_t mode);
 
 /**
  * @brief  After releasing the busy line the encoder does a software reset (the baud rate returns to 9600
  *		   after the checksum byte is sent).
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_reset(UART_HandleTypeDef *huart);
+uint8_t pitch_reset(UART_HandleTypeDef *huart, uint8_t addr);
 
 /**
  * @brief  After releasing the busy line the encoder does a software reset (the baud rate returns to 9600
  *		   after the checksum byte is sent).
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_loopback_mode(UART_HandleTypeDef *huart);
+uint8_t pitch_loopback_mode(UART_HandleTypeDef *huart, uint8_t addr);
 
 /**
  * @brief  After releasing the busy line the encoder does a software reset (the baud rate returns to 9600
  *		   after the checksum byte is sent).
  * @param  UART_HandleTypeDef *huart
+ * @param  uint8_t addr
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_off_line(UART_HandleTypeDef *huart);
+uint8_t pitch_off_line(UART_HandleTypeDef *huart, uint8_t addr);
 
 /**
  * @brief  After releasing the busy line the encoder does a software reset (the baud rate returns to 9600
  *		   after the checksum byte is sent).
  * @param  UART_HandleTypeDef *huart
- * uint8_t baud_rate
+ * @param  uint8_t addr
+ * @param  uint8_t baud_rate
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_change_baud_rate(UART_HandleTypeDef *huart, uint8_t baud_rate);
+uint8_t pitch_change_baud_rate(UART_HandleTypeDef *huart, uint8_t addr, uint8_t baud_rate);
 
 /**
  * @brief  Initialisation de l'encodeur
+ * @param  UART_HandleTypeDef *uart
  * @param  uint8_t addr
  * @retval uint8_t
  */
