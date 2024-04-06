@@ -65,6 +65,8 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define ADC1_IN0_Pin GPIO_PIN_0
 #define ADC1_IN0_GPIO_Port GPIOA
+#define pitch_busy_line_Pin GPIO_PIN_4
+#define pitch_busy_line_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

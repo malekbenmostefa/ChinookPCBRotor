@@ -1,8 +1,10 @@
 LaunchTargetManager/org.eclipse.launchbar.core.launchTargetType.local,Local/arch=x86_64
 LaunchTargetManager/org.eclipse.launchbar.core.launchTargetType.local,Local/name=Local
 LaunchTargetManager/org.eclipse.launchbar.core.launchTargetType.local,Local/os=win32
-configDescList=org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:MarioC10_2022 Debug,org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:MarioC10_2023 Debug,org.eclipse.launchbar.core.descriptorType.default\:ChinookSensor_PFE2024 Debug
+configDescList=org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:MarioC10_2022 Debug,org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:MarioC10_2023 Debug,org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:ChinookSensor_PFE2024 Debug
 eclipse.preferences.version=1
+org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:ChinookSensor_PFE2024\ Debug/activeLaunchMode=run
+org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:ChinookSensor_PFE2024\ Debug/activeLaunchTarget=null\:---
 org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:MarioC10_2022\ Debug/activeLaunchMode=run
 org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:MarioC10_2022\ Debug/activeLaunchTarget=null\:---
 org.eclipse.launchbar.core.descriptorType.default\:ChinookSensor_PFE2024\ Debug/activeLaunchTarget=org.eclipse.launchbar.core.launchTargetType.local\:Local

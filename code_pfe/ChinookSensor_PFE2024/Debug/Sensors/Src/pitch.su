@@ -1,3 +1,4 @@
-../Sensors/Src/pitch.c:24:9:encodeur_Init	16	static
-../Sensors/Src/pitch.c:28:9:SB_cmd	24	static
-../Sensors/Src/pitch.c:37:9:transmit_SB_cmd	16	static
+../Sensors/Src/pitch.c:24:9:SB_cmd	24	static
+../Sensors/Src/pitch.c:33:9:pitch_send_SB_cmd	24	static
+../Sensors/Src/pitch.c:54:9:encodeur_Init	16	static
+../Sensors/Src/pitch.c:58:6:HAL_UART_RxCpltCallback	16	static,ignoring_inline_asm

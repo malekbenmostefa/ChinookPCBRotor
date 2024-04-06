@@ -1,0 +1,6 @@
+../Sensors/Src/buffer.c:26:6:buffer_new	24	static
+../Sensors/Src/buffer.c:45:9:buffer_push	24	static
+../Sensors/Src/buffer.c:70:9:buffer_pull	24	static
+../Sensors/Src/buffer.c:94:9:buffer_count	16	static
+../Sensors/Src/buffer.c:108:9:buffer_size	16	static
+../Sensors/Src/buffer.c:122:6:buffer_flush	16	static

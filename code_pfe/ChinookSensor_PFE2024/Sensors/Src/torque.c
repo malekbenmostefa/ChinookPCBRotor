@@ -28,7 +28,7 @@
  */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-	adc_value = HAL_ADC_GetValue(hadcl);
+	adc_value = HAL_ADC_GetValue(hadc);
 	new_adc_value = 1;
 }
 
