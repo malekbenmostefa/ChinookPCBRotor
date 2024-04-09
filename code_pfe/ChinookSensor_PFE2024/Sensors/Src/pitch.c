@@ -13,6 +13,28 @@
 
 /* Private typedef -----------------------------------------------------------*/
 
+// global variables
+volatile uint8_t Rx_byte;
+volatile uint8_t Rx_data[10];
+volatile uint8_t Rx_indx = 0;
+
+volatile uint8_t byte_type = 0;
+
+uint8_t turn_mode = 0;
+
+uint8_t checksum[1];
+
+volatile uint8_t position_rx_buff[2];
+uint8_t position_time_rx_buff[4];
+uint8_t position_time_status_rx_buff[5];
+
+uint8_t serial_number_rx_buff[5];
+uint8_t address_rx_buff[2];
+uint8_t factory_info_rx_buff[15];
+uint8_t resolution_rx_buff[3];
+uint8_t mode_rx_buff[3];
+
+uint8_t busy_line_state = 0;
 /* Private function prototypes -----------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
@@ -20,6 +42,10 @@
 /* Private function prototypes -----------------------------------------------*/
 
 /* Public functions  ---------------------------------------------------------*/
+
+uint8_t calculate_checksum(uint8_t data){
+
+}
 
 uint8_t SB_cmd(uint8_t addr,uint8_t cmd){
 	uint8_t request = 0;
@@ -30,15 +56,15 @@ uint8_t SB_cmd(uint8_t addr,uint8_t cmd){
 	return request;
 }
 
-uint8_t pitch_send_SB_cmd(UART_HandleTypeDef *huart, uint8_t *request){
+uint8_t pitch_send_SB_cmd(UART_HandleTypeDef *huart, uint8_t request){
 
-	HAL_UART_Transmit_IT(huart, (uint8_t*)request, sizeof(*request));
+	HAL_UART_Transmit_IT(huart, (uint8_t*)&request, sizeof(request));
 
-	uint8_t cmd = (*request >> 4);
+	uint8_t cmd = request & 0x0F; // Bit mask sur 4 bit LSB
 
 	switch(cmd){
 		case REQUEST_POSITION :
-			HAL_UART_Receive_IT(huart,position_rx_buff,POSITION_LENGTH);
+			byte_type = 0;
 			break;
 		case REQUEST_POSITION_STATUS :
 			HAL_UART_Receive_IT(huart,position_time_rx_buff,POSITION_LENGTH+STATUT_LENGTH);
@@ -295,5 +321,16 @@ uint8_t pitch_change_baud_rate(UART_HandleTypeDef *huart, uint8_t addr, uint8_t 
 
 uint8_t encodeur_Init(UART_HandleTypeDef *uart, uint8_t addr){
 
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+	if (huart->Instance == UART5) { // Current UART
+		if(byte_type == 0){
+			position_rx_buff[Rx_indx] = Rx_byte;
+			Rx_indx++;
+			if(Rx_indx == POSITION_LENGTH){Rx_indx = 0;}
+		}
+		HAL_UART_Receive_IT(huart, Rx_byte, 1);
+	}
 }
 /* Private functions ---------------------------------------------------------*/

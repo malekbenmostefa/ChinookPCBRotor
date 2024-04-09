@@ -58,7 +58,8 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+extern uint8_t position_rx_buff[2];
+extern volatile uint8_t Rx_byte;
 /* USER CODE END 0 */
 
 /**
@@ -91,14 +92,17 @@ int main(void)
   MX_GPIO_Init();
   MX_ADC1_Init();
   MX_CAN1_Init();
-  MX_UART4_Init();
   MX_UART5_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start(htim1);
-  HAL_TIM_Base_Start_IT(htim2);
-  HAL_ADC_Start_IT(hadcl);
+  //HAL_TIM_Base_Start(&htim1);
+  //HAL_TIM_Base_Start_IT(&htim2);
+  //HAL_ADC_Start_IT(&hadc1);
+
+  uint8_t request = SB_cmd(ADDR_ENCODEUR,REQUEST_POSITION);
+  HAL_UART_Receive_IT(&huart5,&Rx_byte,1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -108,6 +112,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  pitch_send_SB_cmd(&huart5, request);
+	  HAL_Delay(1000);
+	  if(position_rx_buff[1] == 13){
+		  HAL_Delay(1000);
+	  }
   }
   /* USER CODE END 3 */
 }

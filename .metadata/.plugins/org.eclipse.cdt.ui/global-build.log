@@ -1,155 +1,32 @@
-17:55:48 **** Incremental Build of configuration Debug for project ChinookSensor_PFE2024 ****
+22:45:16 **** Incremental Build of configuration Debug for project ChinookSensor_PFE2024 ****
 make -j8 all 
-arm-none-eabi-gcc "../Sensors/Src/pitch.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F446xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I../Sensors/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Sensors/Src/pitch.d" -MT"Sensors/Src/pitch.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Sensors/Src/pitch.o"
-arm-none-eabi-gcc "../Sensors/Src/rpm.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F446xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I../Sensors/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Sensors/Src/rpm.d" -MT"Sensors/Src/rpm.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Sensors/Src/rpm.o"
-arm-none-eabi-gcc "../Core/Src/adc.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F446xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I../Sensors/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/adc.d" -MT"Core/Src/adc.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/adc.o"
-arm-none-eabi-gcc "../Core/Src/can.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F446xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I../Sensors/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/can.d" -MT"Core/Src/can.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/can.o"
-arm-none-eabi-gcc "../Core/Src/gpio.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F446xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I../Sensors/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/gpio.d" -MT"Core/Src/gpio.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/gpio.o"
 arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F446xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I../Sensors/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
-arm-none-eabi-gcc "../Core/Src/stm32f4xx_hal_msp.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F446xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I../Sensors/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/stm32f4xx_hal_msp.d" -MT"Core/Src/stm32f4xx_hal_msp.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/stm32f4xx_hal_msp.o"
-arm-none-eabi-gcc "../Core/Src/stm32f4xx_it.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F446xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I../Sensors/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/stm32f4xx_it.d" -MT"Core/Src/stm32f4xx_it.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/stm32f4xx_it.o"
-../Sensors/Src/pitch.c: In function 'encodeur_Init':
-../Sensors/Src/pitch.c:298:1: warning: control reaches end of non-void function [-Wreturn-type]
-  298 | }
-      | ^
-../Sensors/Src/rpm.c: In function 'EXTI_Init':
-../Sensors/Src/rpm.c:32:9: error: 'hexti0' undeclared (first use in this function)
-   32 |         hexti0->Line = EXTI_LINE_0;
-      |         ^~~~~~
-../Sensors/Src/rpm.c:32:9: note: each undeclared identifier is reported only once for each function it appears in
-../Sensors/Src/rpm.c: In function 'EXTI_CallBack':
-../Sensors/Src/rpm.c:64:1: warning: control reaches end of non-void function [-Wreturn-type]
-   64 | }
-      | ^
-In file included from ../Core/Inc/main.h:36,
-                 from ../Core/Inc/adc.h:29,
-                 from ../Core/Src/adc.c:21:
-../Sensors/Inc/torque.h:20:16: warning: 'new_adc_value' initialized and declared 'extern'
-   20 | extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |                ^~~~~~~~~~~~~
-In file included from ../Core/Inc/adc.h:29,
-                 from ../Core/Src/adc.c:21:
-../Core/Inc/main.h:45:9: error: redefinition of 'new_adc_value'
-   45 | uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |         ^~~~~~~~~~~~~
-In file included from ../Core/Inc/main.h:36,
-                 from ../Core/Inc/adc.h:29,
-                 from ../Core/Src/adc.c:21:
-../Sensors/Inc/torque.h:20:16: note: previous definition of 'new_adc_value' with type 'uint8_t' {aka 'unsigned char'}
-   20 | extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |                ^~~~~~~~~~~~~
-make: *** [Sensors/Src/subdir.mk:25: Sensors/Src/rpm.o] Error 1
-make: *** Waiting for unfinished jobs....
-make: *** [Core/Src/subdir.mk:49: Core/Src/adc.o] Error 1
-In file included from ../Core/Inc/main.h:36,
-                 from ../Core/Inc/can.h:29,
-                 from ../Core/Src/can.c:21:
-../Sensors/Inc/torque.h:20:16: warning: 'new_adc_value' initialized and declared 'extern'
-   20 | extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |                ^~~~~~~~~~~~~
-In file included from ../Core/Inc/can.h:29,
-                 from ../Core/Src/can.c:21:
-../Core/Inc/main.h:45:9: error: redefinition of 'new_adc_value'
-   45 | uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |         ^~~~~~~~~~~~~
-In file included from ../Core/Inc/main.h:36,
-                 from ../Core/Inc/can.h:29,
-                 from ../Core/Src/can.c:21:
-../Sensors/Inc/torque.h:20:16: note: previous definition of 'new_adc_value' with type 'uint8_t' {aka 'unsigned char'}
-   20 | extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |                ^~~~~~~~~~~~~
-In file included from ../Core/Inc/main.h:36,
-                 from ../Core/Inc/gpio.h:29,
-                 from ../Core/Src/gpio.c:22:
-../Sensors/Inc/torque.h:20:16: warning: 'new_adc_value' initialized and declared 'extern'
-   20 | extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |                ^~~~~~~~~~~~~
-In file included from ../Core/Inc/gpio.h:29,
-                 from ../Core/Src/gpio.c:22:
-../Core/Inc/main.h:45:9: error: redefinition of 'new_adc_value'
-   45 | uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |         ^~~~~~~~~~~~~
-In file included from ../Core/Inc/main.h:36,
-                 from ../Core/Inc/gpio.h:29,
-                 from ../Core/Src/gpio.c:22:
-../Sensors/Inc/torque.h:20:16: note: previous definition of 'new_adc_value' with type 'uint8_t' {aka 'unsigned char'}
-   20 | extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |                ^~~~~~~~~~~~~
-make: *** [Core/Src/subdir.mk:49: Core/Src/can.o] Error 1
-make: *** [Core/Src/subdir.mk:49: Core/Src/gpio.o] Error 1
-In file included from ../Core/Inc/main.h:36,
-                 from ../Core/Src/main.c:20:
-../Sensors/Inc/torque.h:20:16: warning: 'new_adc_value' initialized and declared 'extern'
-   20 | extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |                ^~~~~~~~~~~~~
-In file included from ../Core/Src/main.c:20:
-../Core/Inc/main.h:45:9: error: redefinition of 'new_adc_value'
-   45 | uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |         ^~~~~~~~~~~~~
-In file included from ../Core/Inc/main.h:36,
-                 from ../Core/Src/main.c:20:
-../Sensors/Inc/torque.h:20:16: note: previous definition of 'new_adc_value' with type 'uint8_t' {aka 'unsigned char'}
-   20 | extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |                ^~~~~~~~~~~~~
-In file included from ../Core/Inc/main.h:36,
-                 from ../Core/Src/stm32f4xx_hal_msp.c:22:
-../Sensors/Inc/torque.h:20:16: warning: 'new_adc_value' initialized and declared 'extern'
-   20 | extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |                ^~~~~~~~~~~~~
-In file included from ../Core/Src/stm32f4xx_hal_msp.c:22:
-../Core/Inc/main.h:45:9: error: redefinition of 'new_adc_value'
-   45 | uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |         ^~~~~~~~~~~~~
-In file included from ../Core/Inc/main.h:36,
-                 from ../Core/Src/stm32f4xx_hal_msp.c:22:
-../Sensors/Inc/torque.h:20:16: note: previous definition of 'new_adc_value' with type 'uint8_t' {aka 'unsigned char'}
-   20 | extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |                ^~~~~~~~~~~~~
 ../Core/Src/main.c: In function 'main':
-../Core/Src/main.c:99:22: error: incompatible type for argument 1 of 'HAL_TIM_Base_Start'
-   99 |   HAL_TIM_Base_Start(htim1);
-      |                      ^~~~~
-      |                      |
-      |                      TIM_HandleTypeDef
-In file included from ../Core/Inc/stm32f4xx_hal_conf.h:407,
+../Core/Src/main.c:104:31: warning: passing argument 2 of 'HAL_UART_Receive_IT' discards 'volatile' qualifier from pointer target type [-Wdiscarded-qualifiers]
+  104 |   HAL_UART_Receive_IT(&huart5,&Rx_byte,1);
+      |                               ^~~~~~~~
+In file included from ../Core/Inc/stm32f4xx_hal_conf.h:411,
                  from ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:29,
                  from ../Core/Inc/main.h:30,
                  from ../Core/Src/main.c:20:
-../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:1895:57: note: expected 'TIM_HandleTypeDef *' but argument is of type 'TIM_HandleTypeDef'
- 1895 | HAL_StatusTypeDef HAL_TIM_Base_Start(TIM_HandleTypeDef *htim);
-      |                                      ~~~~~~~~~~~~~~~~~~~^~~~
-../Core/Src/main.c:100:25: error: incompatible type for argument 1 of 'HAL_TIM_Base_Start_IT'
-  100 |   HAL_TIM_Base_Start_IT(htim2);
-      |                         ^~~~~
-      |                         |
-      |                         TIM_HandleTypeDef
-In file included from ../Core/Inc/stm32f4xx_hal_conf.h:407,
-                 from ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:29,
-                 from ../Core/Inc/main.h:30,
-                 from ../Core/Src/main.c:20:
-../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:1898:60: note: expected 'TIM_HandleTypeDef *' but argument is of type 'TIM_HandleTypeDef'
- 1898 | HAL_StatusTypeDef HAL_TIM_Base_Start_IT(TIM_HandleTypeDef *htim);
-      |                                         ~~~~~~~~~~~~~~~~~~~^~~~
-../Core/Src/main.c:101:20: error: 'hadcl' undeclared (first use in this function); did you mean 'hadc1'?
-  101 |   HAL_ADC_Start_IT(hadcl);
-      |                    ^~~~~
-      |                    hadc1
-../Core/Src/main.c:101:20: note: each undeclared identifier is reported only once for each function it appears in
-make: *** [Core/Src/subdir.mk:49: Core/Src/stm32f4xx_hal_msp.o] Error 1
-make: *** [Core/Src/subdir.mk:49: Core/Src/main.o] Error 1
-In file included from ../Core/Inc/main.h:36,
-                 from ../Core/Src/stm32f4xx_it.c:21:
-../Sensors/Inc/torque.h:20:16: warning: 'new_adc_value' initialized and declared 'extern'
-   20 | extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |                ^~~~~~~~~~~~~
-In file included from ../Core/Src/stm32f4xx_it.c:21:
-../Core/Inc/main.h:45:9: error: redefinition of 'new_adc_value'
-   45 | uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |         ^~~~~~~~~~~~~
-In file included from ../Core/Inc/main.h:36,
-                 from ../Core/Src/stm32f4xx_it.c:21:
-../Sensors/Inc/torque.h:20:16: note: previous definition of 'new_adc_value' with type 'uint8_t' {aka 'unsigned char'}
-   20 | extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
-      |                ^~~~~~~~~~~~~
-make: *** [Core/Src/subdir.mk:49: Core/Src/stm32f4xx_it.o] Error 1
-"make -j8 all" terminated with exit code 2. Build might be incomplete.
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:748:75: note: expected 'uint8_t *' {aka 'unsigned char *'} but argument is of type 'volatile uint8_t *' {aka 'volatile unsigned char *'}
+  748 | HAL_StatusTypeDef HAL_UART_Receive_IT(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size);
+      |                                                                  ~~~~~~~~~^~~~~
+arm-none-eabi-gcc -o "ChinookSensor_PFE2024.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\porsc\OneDrive\Documents\ETS\Session11\ELE795\Code\ChinookPCBRotor\code_pfe\ChinookSensor_PFE2024\STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ChinookSensor_PFE2024.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: ChinookSensor_PFE2024.elf
+ 
+arm-none-eabi-size  ChinookSensor_PFE2024.elf 
+arm-none-eabi-objdump -h -S ChinookSensor_PFE2024.elf  > "ChinookSensor_PFE2024.list"
+   text	   data	    bss	    dec	    hex	filename
+  17928	     20	   1916	  19864	   4d98	ChinookSensor_PFE2024.elf
+Finished building: default.size.stdout
+ 
+Finished building: ChinookSensor_PFE2024.list
+ 
+22:45:23 **** Incremental Build of configuration Debug for project ChinookSensor_PFE2024 ****
+make -j8 all 
+arm-none-eabi-size  ChinookSensor_PFE2024.elf 
+   text	   data	    bss	    dec	    hex	filename
+  17928	     20	   1916	  19864	   4d98	ChinookSensor_PFE2024.elf
+Finished building: default.size.stdout
+ 

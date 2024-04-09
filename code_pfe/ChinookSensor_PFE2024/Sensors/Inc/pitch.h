@@ -70,9 +70,9 @@
 #define MODE_INCR						0x4		// only in multi-turn mode, 1 = sends position change since last request, 0 = send position
 
 //Length received bytes
-#define POSITION_LENGTH					2
-#define STATUT_LENGTH					1
-#define TIME_LENGTH						2
+#define POSITION_LENGTH					2		// Position length is fix on 2 bytes during init phase
+#define STATUT_LENGTH					1		// Status length is 1 byte
+#define TIME_LENGTH						2 		// Time length is 2 bytes
 
 //Baud Rate Commands
 #define BR_1200							0x15	// Baud Rate at 1200
@@ -89,24 +89,16 @@
 #define MULTI_TURN_MODE					1
 
 /* Type definitions ----------------------------------------------------------*/
-uint8_t mode_turn = 0;
-
-uint8_t checksum[1];
-
-uint8_t position_rx_buff[2];
-uint8_t position_time_rx_buff[4];
-uint8_t position_time_status_rx_buff[5];
-
-uint8_t serial_number_rx_buff[5];
-uint8_t address_rx_buff[2];
-uint8_t factory_info_rx_buff[15];
-uint8_t resolution_rx_buff[3];
-uint8_t mode_rx_buff[3];
-
-uint8_t busy_line_state = 0;
 
 
 /* Function prototypes ------------------------------------------------------ */
+
+/**
+ * @brief  Calcul la valeur du checksum attendue
+ * @param  uint8_t data
+ * @retval uint8_t
+ */
+uint8_t calculate_checksum(uint8_t data);
 
 /**
  * @brief  Genere une commande de 8 bits avec le format «single byte» de SEI
@@ -122,7 +114,7 @@ uint8_t SB_cmd(uint8_t addr,uint8_t cmd);
  * @param  uint8_t* request
  * @retval uint8_t (1 = no error, 0 = error)
  */
-uint8_t pitch_send_SB_cmd(UART_HandleTypeDef *huart, uint8_t *request);
+uint8_t pitch_send_SB_cmd(UART_HandleTypeDef *huart, uint8_t request);
 
 /**
  * @brief  Sets the absolute 0 at the current position
@@ -307,11 +299,5 @@ uint8_t pitch_change_baud_rate(UART_HandleTypeDef *huart, uint8_t addr, uint8_t 
  * @retval uint8_t
  */
 uint8_t encodeur_Init(UART_HandleTypeDef *uart, uint8_t addr);
-
-/**
- * @brief  Callback d'un reception completee
- * @param  UART_HandleTypeDef *huart
- */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 
 #endif

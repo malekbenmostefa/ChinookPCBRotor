@@ -12,7 +12,9 @@
 /* Defines -------------------------------------------------------------------*/
 
 /* Private typedef -----------------------------------------------------------*/
-
+extern uint32_t time_interval; // Variable déclarée dans le main.h
+extern uint32_t rpm_value; // Variable déclarée dans le main.h
+extern uint8_t rpm_pulse_count;
 /* Private function prototypes -----------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
@@ -29,8 +31,8 @@
 void EXTI_Init(void)
 {
 	// cexti0, hexti0
-	hexti0->Line = EXTI_LINE_0;
-	hexti0->PendingCallBack = EXTI_CallBack;
+	//hexti0->Line = EXTI_LINE_0;
+	//hexti0->PendingCallBack = EXTI_CallBack;
 }
 
 /**

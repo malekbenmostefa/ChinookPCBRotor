@@ -38,11 +38,11 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-uint32_t time_interval = 0;
-uint32_t rpm_value = 0;
-uint8_t rpm_pulse_count = 0;
-uint32_t adc_value = 0;
-uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
+//uint32_t time_interval = 0;
+//uint32_t rpm_value = 0;
+//uint8_t rpm_pulse_count = 0;
+//uint32_t adc_value = 0;
+//uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -65,6 +65,10 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define ADC1_IN0_Pin GPIO_PIN_0
 #define ADC1_IN0_GPIO_Port GPIOA
+#define pitch_TX_Pin GPIO_PIN_12
+#define pitch_TX_GPIO_Port GPIOC
+#define pitch_RX_Pin GPIO_PIN_2
+#define pitch_RX_GPIO_Port GPIOD
 #define pitch_busy_line_Pin GPIO_PIN_4
 #define pitch_busy_line_GPIO_Port GPIOB
 

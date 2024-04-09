@@ -32,19 +32,20 @@ extern "C" {
 
 /* USER CODE END Includes */
 
-extern UART_HandleTypeDef huart4;
-
 extern UART_HandleTypeDef huart5;
 
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
 
-void MX_UART4_Init(void);
 void MX_UART5_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+/**
+ * @brief  Callback d'un reception completee
+ * @param  UART_HandleTypeDef *huart
+ */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

@@ -1,6 +1,0 @@
-../Sensors/Src/buffer.c:26:6:buffer_new	1
-../Sensors/Src/buffer.c:45:9:buffer_push	2
-../Sensors/Src/buffer.c:70:9:buffer_pull	2
-../Sensors/Src/buffer.c:94:9:buffer_count	1
-../Sensors/Src/buffer.c:108:9:buffer_size	1
-../Sensors/Src/buffer.c:122:6:buffer_flush	1
