@@ -16,6 +16,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_uart.h"
 
 /* Defines -------------------------------------------------------------------*/
 #define pitch_busy_line_Pin GPIO_PIN_4
@@ -23,7 +24,6 @@
 
 #define ADDR_ENCODEUR 					0xF		// Adresse de l'encodeur (parle a tout les encodeurs de la ligne SEI)
 #define RECEIVE_TIMEOUT					5		// Timeout pour laisser le temps à la premier donnée d'arrivé sur le USART RX (msec)
-#define READ_CHECKSUM					0		// 1=Lire les checksum recu 0=Ne pas lire les checksum
 
 //SEI Request Commands
 #define REQUEST_POSITION 				0x1		// POSITION
@@ -97,10 +97,11 @@
 
 /**
  * @brief  Calcul la valeur du checksum attendue
- * @param  uint8_t data
+ * @param  uint8_t *data_tx
+ * @param  uint8_t *data_rx
  * @retval uint8_t
  */
-uint8_t calculate_checksum(uint8_t data);
+uint8_t calculate_checksum(uint8_t *data_tx, uint8_t taille_buffer_tx, uint8_t *data_rx, uint8_t taille_buffer_rx);
 
 /**
  * @brief  Genere une commande de 8 bits avec le format «single byte» de SEI

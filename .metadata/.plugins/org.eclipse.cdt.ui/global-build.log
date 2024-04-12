@@ -1,28 +1,39 @@
-20:05:50 **** Incremental Build of configuration Debug for project ChinookSensor_PFE2024 ****
+16:22:35 **** Incremental Build of configuration Debug for project ChinookSensor_PFE2024 ****
 make -j8 all 
-arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F446xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I../Sensors/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc "../Sensors/Src/pitch.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F446xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I../Sensors/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Sensors/Src/pitch.d" -MT"Sensors/Src/pitch.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Sensors/Src/pitch.o"
 arm-none-eabi-gcc -o "ChinookSensor_PFE2024.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\porsc\OneDrive\Documents\ETS\Session11\ELE795\Code\ChinookPCBRotor\code_pfe\ChinookSensor_PFE2024\STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ChinookSensor_PFE2024.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 Finished building target: ChinookSensor_PFE2024.elf
  
 arm-none-eabi-size  ChinookSensor_PFE2024.elf 
 arm-none-eabi-objdump -h -S ChinookSensor_PFE2024.elf  > "ChinookSensor_PFE2024.list"
    text	   data	    bss	    dec	    hex	filename
-  20432	     20	   1980	  22432	   57a0	ChinookSensor_PFE2024.elf
+  20208	     20	   1988	  22216	   56c8	ChinookSensor_PFE2024.elf
 Finished building: default.size.stdout
  
 Finished building: ChinookSensor_PFE2024.list
  
-20:06:01 **** Incremental Build of configuration Debug for project ChinookSensor_PFE2024 ****
+16:23:20 **** Incremental Build of configuration Debug for project ChinookSensor_PFE2024 ****
 make -j8 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F446xx -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -I../Sensors/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'main':
+../Core/Src/main.c:149:11: warning: unused variable 'csend' [-Wunused-variable]
+  149 |   uint8_t csend[] = {0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08}; // Tx Buffer
+      |           ^~~~~
+arm-none-eabi-gcc -o "ChinookSensor_PFE2024.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\porsc\OneDrive\Documents\ETS\Session11\ELE795\Code\ChinookPCBRotor\code_pfe\ChinookSensor_PFE2024\STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ChinookSensor_PFE2024.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: ChinookSensor_PFE2024.elf
+ 
 arm-none-eabi-size  ChinookSensor_PFE2024.elf 
+arm-none-eabi-objdump -h -S ChinookSensor_PFE2024.elf  > "ChinookSensor_PFE2024.list"
    text	   data	    bss	    dec	    hex	filename
-  20432	     20	   1980	  22432	   57a0	ChinookSensor_PFE2024.elf
+  20332	     20	   2004	  22356	   5754	ChinookSensor_PFE2024.elf
 Finished building: default.size.stdout
  
-20:15:24 **** Incremental Build of configuration Debug for project ChinookSensor_PFE2024 ****
+Finished building: ChinookSensor_PFE2024.list
+ 
+16:24:28 **** Incremental Build of configuration Debug for project ChinookSensor_PFE2024 ****
 make -j8 all 
 arm-none-eabi-size  ChinookSensor_PFE2024.elf 
    text	   data	    bss	    dec	    hex	filename
-  20432	     20	   1980	  22432	   57a0	ChinookSensor_PFE2024.elf
+  20332	     20	   2004	  22356	   5754	ChinookSensor_PFE2024.elf
 Finished building: default.size.stdout
  

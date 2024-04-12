@@ -121,6 +121,7 @@ int main(void)
   //HAL_TIM_Base_Start_IT(&htim2);
   //HAL_ADC_Start_IT(&hadc1);
 
+  pitch_Init(&huart5, ADDR_ENCODEUR);
   uint8_t request = SB_cmd(ADDR_ENCODEUR,REQUEST_POSITION);
 
   canfil.FilterBank = 0;
@@ -147,6 +148,8 @@ int main(void)
 
   uint8_t csend[] = {0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08}; // Tx Buffer
 
+  pitch_Init(&huart5, ADDR_ENCODEUR);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -156,9 +159,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
 	  pitch_send_SB_cmd(&huart5, request);
+
 	  HAL_Delay(1000);
-	  HAL_CAN_AddTxMessage(&hcan1,&txHeader,csend,&canMailbox); // Send Message
+	  //HAL_CAN_AddTxMessage(&hcan1,&txHeader,csend,&canMailbox); // Send Message
   }
   /* USER CODE END 3 */
 }
