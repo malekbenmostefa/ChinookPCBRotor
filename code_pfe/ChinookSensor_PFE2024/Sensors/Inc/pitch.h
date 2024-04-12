@@ -22,6 +22,8 @@
 #define pitch_busy_line_GPIO_Port GPIOB
 
 #define ADDR_ENCODEUR 					0xF		// Adresse de l'encodeur (parle a tout les encodeurs de la ligne SEI)
+#define RECEIVE_TIMEOUT					5		// Timeout pour laisser le temps à la premier donnée d'arrivé sur le USART RX (msec)
+#define READ_CHECKSUM					0		// 1=Lire les checksum recu 0=Ne pas lire les checksum
 
 //SEI Request Commands
 #define REQUEST_POSITION 				0x1		// POSITION
@@ -298,6 +300,6 @@ uint8_t pitch_change_baud_rate(UART_HandleTypeDef *huart, uint8_t addr, uint8_t 
  * @param  uint8_t addr
  * @retval uint8_t
  */
-uint8_t encodeur_Init(UART_HandleTypeDef *uart, uint8_t addr);
+void pitch_Init(UART_HandleTypeDef *uart, uint8_t addr);
 
 #endif

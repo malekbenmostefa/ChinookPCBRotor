@@ -3043,3 +3043,18 @@ All thread infos:
 	at com.st.stm32cube.ide.mcu.sfrview.ui.SfrView$LiveUpdater.run(SfrView.java:407)
 
 
+!SESSION 2024-04-10 15:30:10.470 -----------------------------------------------
+eclipse.buildId=Version 1.14.1
+java.version=17.0.8.1
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=fr_CA
+Command-line arguments:  -os win32 -ws win32 -arch x86_64
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2024-04-10 15:31:10.503
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2024-04-10 15:31:10.521
+!MESSAGE Log4j2 initialized with config file C:\Users\porsc\OneDrive\Documents\ETS\Session11\ELE795\Code\ChinookPCBRotor\.metadata\.log4j2.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2024-04-10 15:31:30.208
+!MESSAGE Started RMI Server, listening on port 41337

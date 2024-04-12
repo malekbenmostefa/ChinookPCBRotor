@@ -13,18 +13,11 @@
 
 /* Private typedef -----------------------------------------------------------*/
 
-// global variables
-volatile uint8_t Rx_byte;
-volatile uint8_t Rx_data[10];
-volatile uint8_t Rx_indx = 0;
-
-volatile uint8_t byte_type = 0;
-
 uint8_t turn_mode = 0;
 
 uint8_t checksum[1];
 
-volatile uint8_t position_rx_buff[2];
+uint8_t position_rx_buff[2];
 uint8_t position_time_rx_buff[4];
 uint8_t position_time_status_rx_buff[5];
 
@@ -35,6 +28,7 @@ uint8_t resolution_rx_buff[3];
 uint8_t mode_rx_buff[3];
 
 uint8_t busy_line_state = 0;
+
 /* Private function prototypes -----------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
@@ -64,13 +58,13 @@ uint8_t pitch_send_SB_cmd(UART_HandleTypeDef *huart, uint8_t request){
 
 	switch(cmd){
 		case REQUEST_POSITION :
-			byte_type = 0;
+			HAL_UART_Receive(huart,position_rx_buff,2,RECEIVE_TIMEOUT);
 			break;
 		case REQUEST_POSITION_STATUS :
-			HAL_UART_Receive_IT(huart,position_time_rx_buff,POSITION_LENGTH+STATUT_LENGTH);
+			HAL_UART_Receive(huart,position_time_rx_buff,POSITION_LENGTH+STATUT_LENGTH,RECEIVE_TIMEOUT);
 			break;
 		case REQUEST_POSITION_TIME_STATUS :
-			HAL_UART_Receive_IT(huart,position_time_status_rx_buff,POSITION_LENGTH+TIME_LENGTH+STATUT_LENGTH);
+			HAL_UART_Receive(huart,position_time_status_rx_buff,POSITION_LENGTH+TIME_LENGTH+STATUT_LENGTH,RECEIVE_TIMEOUT);
 			break;
 	}
 	return 1;
@@ -84,7 +78,10 @@ uint8_t pitch_set_origin(UART_HandleTypeDef *huart, uint8_t addr){
 
 	HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 
-	HAL_UART_Receive_IT(huart,(uint8_t*)checksum, sizeof(checksum));
+	if(READ_CHECKSUM == 1){
+		HAL_UART_Receive(huart, (uint8_t*)checksum, sizeof(checksum),RECEIVE_TIMEOUT);
+	}
+
 	return 1;
 }
 
@@ -110,7 +107,10 @@ uint8_t pitch_set_absolute_position(UART_HandleTypeDef *huart, uint8_t addr, uin
 		HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 	}
 
-	HAL_UART_Receive_IT(huart,(uint8_t*)checksum, sizeof(checksum));
+	if(READ_CHECKSUM == 1){
+		HAL_UART_Receive(huart, (uint8_t*)checksum, sizeof(checksum),RECEIVE_TIMEOUT);
+	}
+
 	return 1;
 }
 
@@ -121,7 +121,7 @@ uint8_t pitch_read_serial_number(UART_HandleTypeDef *huart, uint8_t addr){
 
 	HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 
-	HAL_UART_Receive_IT(huart,(uint8_t*)serial_number_rx_buff, sizeof(serial_number_rx_buff));
+	HAL_UART_Receive(huart,(uint8_t*)serial_number_rx_buff, sizeof(serial_number_rx_buff),RECEIVE_TIMEOUT);
 	return 1;
 }
 
@@ -186,7 +186,7 @@ uint8_t pitch_get_address(UART_HandleTypeDef *huart, uint8_t addr, uint8_t *seri
 
 	HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 
-	HAL_UART_Receive_IT(huart,(uint8_t*)address_rx_buff, sizeof(address_rx_buff));
+	HAL_UART_Receive(huart,(uint8_t*)address_rx_buff, sizeof(address_rx_buff),RECEIVE_TIMEOUT);
 	return 1;
 }
 
@@ -202,7 +202,10 @@ uint8_t pitch_assign_address(UART_HandleTypeDef *huart, uint8_t addr, uint8_t *s
 
 	HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 
-	HAL_UART_Receive_IT(huart,(uint8_t*)checksum, sizeof(checksum));
+	if(READ_CHECKSUM == 1){
+		HAL_UART_Receive(huart, (uint8_t*)checksum, sizeof(checksum),RECEIVE_TIMEOUT);
+	}
+
 	return 1;
 }
 
@@ -213,7 +216,7 @@ uint8_t pitch_read_factory_info(UART_HandleTypeDef *huart, uint8_t addr){
 
 	HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 
-	HAL_UART_Receive_IT(huart, (uint8_t*)factory_info_rx_buff, sizeof(factory_info_rx_buff));
+	HAL_UART_Receive(huart, (uint8_t*)factory_info_rx_buff, sizeof(factory_info_rx_buff),RECEIVE_TIMEOUT);
 	return 1;
 }
 
@@ -224,7 +227,7 @@ uint8_t pitch_read_resolution(UART_HandleTypeDef *huart, uint8_t addr){
 
 	HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 
-	HAL_UART_Receive_IT(huart, (uint8_t*)resolution_rx_buff, sizeof(resolution_rx_buff));
+	HAL_UART_Receive(huart, (uint8_t*)resolution_rx_buff, sizeof(resolution_rx_buff),RECEIVE_TIMEOUT);
 	return 1;
 }
 
@@ -237,7 +240,10 @@ uint8_t pitch_change_resolution(UART_HandleTypeDef *huart, uint8_t addr, uint8_t
 
 	HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 
-	HAL_UART_Receive_IT(huart,(uint8_t*)checksum, sizeof(checksum));
+	if(READ_CHECKSUM == 1){
+		HAL_UART_Receive(huart, (uint8_t*)checksum, sizeof(checksum),RECEIVE_TIMEOUT);
+	}
+
 	return 1;
 }
 
@@ -248,7 +254,10 @@ uint8_t pitch_read_mode(UART_HandleTypeDef *huart, uint8_t addr){
 
 	HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 
-	HAL_UART_Receive_IT(huart, (uint8_t*)mode_rx_buff, sizeof(mode_rx_buff));
+	if(READ_CHECKSUM == 1){
+		HAL_UART_Receive(huart, (uint8_t*)checksum, sizeof(checksum),RECEIVE_TIMEOUT);
+	}
+
 	return 1;
 }
 
@@ -260,7 +269,10 @@ uint8_t pitch_change_mode(UART_HandleTypeDef *huart, uint8_t addr, uint8_t mode)
 
 	HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 
-	HAL_UART_Receive_IT(huart, (uint8_t*)checksum, sizeof(checksum));
+	if(READ_CHECKSUM == 1){
+		HAL_UART_Receive(huart, (uint8_t*)checksum, sizeof(checksum),RECEIVE_TIMEOUT);
+	}
+
 	return 1;
 }
 
@@ -272,7 +284,10 @@ uint8_t pitch_change_power_up_mode(UART_HandleTypeDef *huart, uint8_t addr, uint
 
 	HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 
-	HAL_UART_Receive_IT(huart, (uint8_t*)checksum, sizeof(checksum));
+	if(READ_CHECKSUM == 1){
+		HAL_UART_Receive(huart, (uint8_t*)checksum, sizeof(checksum),RECEIVE_TIMEOUT);
+	}
+
 	return 1;
 }
 
@@ -283,7 +298,10 @@ uint8_t pitch_reset(UART_HandleTypeDef *huart, uint8_t addr){
 
 	HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 
-	HAL_UART_Receive_IT(huart, (uint8_t*)checksum, sizeof(checksum));
+	if(READ_CHECKSUM == 1){
+		HAL_UART_Receive(huart, (uint8_t*)checksum, sizeof(checksum),RECEIVE_TIMEOUT);
+	}
+
 	return 1;
 }
 
@@ -303,7 +321,10 @@ uint8_t pitch_off_line(UART_HandleTypeDef *huart, uint8_t addr){
 
 	HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 
-	HAL_UART_Receive_IT(huart, (uint8_t*)checksum, sizeof(checksum));
+	if(READ_CHECKSUM == 1){
+		HAL_UART_Receive(huart, (uint8_t*)checksum, sizeof(checksum),RECEIVE_TIMEOUT);
+	}
+
 	return 1;
 }
 
@@ -315,22 +336,15 @@ uint8_t pitch_change_baud_rate(UART_HandleTypeDef *huart, uint8_t addr, uint8_t 
 
 	HAL_UART_Transmit_IT(huart, (uint8_t*)data_tx, sizeof(data_tx));
 
-	HAL_UART_Receive_IT(huart, (uint8_t*)checksum, sizeof(checksum));
+	if(READ_CHECKSUM == 1){
+		HAL_UART_Receive(huart, (uint8_t*)checksum, sizeof(checksum),RECEIVE_TIMEOUT);
+	}
+
 	return 1;
 }
 
-uint8_t encodeur_Init(UART_HandleTypeDef *uart, uint8_t addr){
+void pitch_Init(UART_HandleTypeDef *uart, uint8_t addr){
 
 }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	if (huart->Instance == UART5) { // Current UART
-		if(byte_type == 0){
-			position_rx_buff[Rx_indx] = Rx_byte;
-			Rx_indx++;
-			if(Rx_indx == POSITION_LENGTH){Rx_indx = 0;}
-		}
-		HAL_UART_Receive_IT(huart, Rx_byte, 1);
-	}
-}
 /* Private functions ---------------------------------------------------------*/
