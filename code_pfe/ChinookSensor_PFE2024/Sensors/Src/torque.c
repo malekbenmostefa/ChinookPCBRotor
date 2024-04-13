@@ -12,8 +12,8 @@
 /* Defines -------------------------------------------------------------------*/
 
 /* Private typedef -----------------------------------------------------------*/
-extern uint32_t adc_value; // Variable déclarée dans le main.h
-extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
+uint32_t adc_value = 0; // Variable déclarée dans le main.h
+uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
 /* Private function prototypes -----------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
@@ -23,13 +23,16 @@ extern uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
 /* Public functions  ---------------------------------------------------------*/
 
 /**
- * @brief  Fonction qui sera appelée lorsqu'une conversion sera complétée
- * @param  None
+ * @brief  Fonction qui sera appelée lorsqu'une conversion sera complétée sur un ADC
+ * @param  ADC_HandleTypeDef *hadc
  * @retval None
  */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-	uint8_t adc_value = HAL_ADC_GetValue(hadc);
+	// Instruction pour tester la fréquence de conversion (mesure à l'oscilloscope)
+	//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
+
+	adc_value = HAL_ADC_GetValue(hadc);
 	new_adc_value = 1;
 }
 

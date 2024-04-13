@@ -38,11 +38,11 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-//uint32_t time_interval = 0;
-//uint32_t rpm_value = 0;
-//uint8_t rpm_pulse_count = 0;
-//uint32_t adc_value = 0;
-//uint8_t new_adc_value = 0; // 1 s'il y a une nouvelle valeur lue, sinon 0
+extern uint32_t time_interval;
+extern uint32_t rpm_value;
+extern uint8_t rpm_pulse_count;
+extern uint32_t adc_value;
+extern uint8_t new_adc_value; // 1 s'il y a une nouvelle valeur lue, sinon 0
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

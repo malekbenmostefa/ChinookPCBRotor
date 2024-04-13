@@ -93,12 +93,12 @@ int main(void)
   MX_ADC1_Init();
   MX_CAN1_Init();
   MX_UART5_Init();
-  MX_TIM1_Init();
   MX_TIM2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  //HAL_TIM_Base_Start(&htim1);
-  //HAL_TIM_Base_Start_IT(&htim2);
-  //HAL_ADC_Start_IT(&hadc1);
+  HAL_TIM_Base_Start(&htim3); // Timer utilisé pour cadencer l'acquisition automatique avec l'ADC
+  HAL_TIM_Base_Start_IT(&htim2); // Timer utilisé pour mesurer des intervalles de temps entre les pulse sur l'EXTI
+  HAL_ADC_Start_IT(&hadc1); // ADC qui mesure le torque automatiquement à tous les 5 ms
 
   uint8_t request = SB_cmd(ADDR_ENCODEUR,REQUEST_POSITION);
   HAL_UART_Receive_IT(&huart5,&Rx_byte,1);

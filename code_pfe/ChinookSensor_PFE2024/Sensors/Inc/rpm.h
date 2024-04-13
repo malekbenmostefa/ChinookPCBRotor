@@ -18,8 +18,7 @@
 /* Type definitions ----------------------------------------------------------*/
 
 /* Function prototypes ------------------------------------------------------ */
-void EXTI_Init(void);
-void* EXTI_CallBack(void);
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim);
 
 #endif

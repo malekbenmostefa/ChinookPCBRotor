@@ -18,5 +18,6 @@
 /* Type definitions ----------------------------------------------------------*/
 
 /* Function prototypes ------------------------------------------------------ */
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc);
 
 #endif

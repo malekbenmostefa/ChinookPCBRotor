@@ -12,9 +12,9 @@
 /* Defines -------------------------------------------------------------------*/
 
 /* Private typedef -----------------------------------------------------------*/
-extern uint32_t time_interval; // Variable déclarée dans le main.h
-extern uint32_t rpm_value; // Variable déclarée dans le main.h
-extern uint8_t rpm_pulse_count;
+uint32_t time_interval = 0; // Variable déclarée dans le main.h
+uint32_t rpm_value = 0; // Variable déclarée dans le main.h
+uint8_t rpm_pulse_count = 0;
 /* Private function prototypes -----------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
@@ -24,40 +24,27 @@ extern uint8_t rpm_pulse_count;
 /* Public functions  ---------------------------------------------------------*/
 
 /**
- * @brief  Fonction qui initialise le callback du EXTI0 (EXTI ligne 0)
- * @param  None
- * @retval None
- */
-void EXTI_Init(void)
-{
-	// cexti0, hexti0
-	//hexti0->Line = EXTI_LINE_0;
-	//hexti0->PendingCallBack = EXTI_CallBack;
-}
-
-/**
  * @brief  Fonction qui est appelée en callback lorsqu'un pulse est détecté du capteur rpm
  * @param  None
  * @retval None
  */
-void* EXTI_CallBack(void)
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-
+	time_interval = TIM2->CNT;
 	if(rpm_pulse_count == 0)
 	{
 		rpm_pulse_count = 1;
 	}
 	else if(rpm_pulse_count == 1)
 	{
+		TIM2->CNT = 0;
 		rpm_pulse_count = 0;
-		time_interval = TIM2->CR2; // à valider le nom du registre de compteur (TIM2->CR2 ??)
-		TIM2->CR2 = 0; // à valider le nom du registre de compteur (TIM2->CR2 ??)
 		rpm_value = time_interval*60/1000000; // Conversion rotation par us en rpm
 		// Si overflow interrupt de tim2, alors rpm=0 (on reset rpm_pulse_count=0)
 	}
 	else
 	{
-		// Erreur, on reset les valeurs
+		// Erreur (valeur de rpm_pulse_count erroné), on reset les valeurs
 		rpm_pulse_count = 0;
 		time_interval = 0;
 		rpm_value = 0;
@@ -77,7 +64,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 	rpm_pulse_count = 0;
 	time_interval = 0;
 	rpm_value = 0;
-	TIM2->CR2 = 0;
+	TIM2->CNT = 0;
 }
 
 /* Private functions ---------------------------------------------------------*/
