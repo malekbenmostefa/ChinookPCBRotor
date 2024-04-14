@@ -28,7 +28,6 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_can.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -64,14 +63,31 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define ADC1_IN0_Pin GPIO_PIN_0
-#define ADC1_IN0_GPIO_Port GPIOA
-#define pitch_TX_Pin GPIO_PIN_12
-#define pitch_TX_GPIO_Port GPIOC
-#define pitch_RX_Pin GPIO_PIN_2
-#define pitch_RX_GPIO_Port GPIOD
-#define pitch_busy_line_Pin GPIO_PIN_4
-#define pitch_busy_line_GPIO_Port GPIOB
+#define RPM_EXTI_Pin GPIO_PIN_0
+#define RPM_EXTI_GPIO_Port GPIOC
+#define RPM_EXTI_EXTI_IRQn EXTI0_IRQn
+#define Torque_ADC_Pin GPIO_PIN_0
+#define Torque_ADC_GPIO_Port GPIOA
+#define Torque_GPIO_IN_Pin GPIO_PIN_1
+#define Torque_GPIO_IN_GPIO_Port GPIOA
+#define Etat_Torque_Pin GPIO_PIN_4
+#define Etat_Torque_GPIO_Port GPIOA
+#define Etat_RPM_Pin GPIO_PIN_5
+#define Etat_RPM_GPIO_Port GPIOA
+#define Etat_MCU_Pin GPIO_PIN_6
+#define Etat_MCU_GPIO_Port GPIOA
+#define Pitch_UART_TX_Pin GPIO_PIN_12
+#define Pitch_UART_TX_GPIO_Port GPIOC
+#define Pitch_UART_RX_Pin GPIO_PIN_2
+#define Pitch_UART_RX_GPIO_Port GPIOD
+#define Pitch_GPIO_OUT_Pin GPIO_PIN_3
+#define Pitch_GPIO_OUT_GPIO_Port GPIOB
+#define Pitch_busy_line_Pin GPIO_PIN_4
+#define Pitch_busy_line_GPIO_Port GPIOB
+#define OldPitch_GPIO_OUT_Pin GPIO_PIN_5
+#define OldPitch_GPIO_OUT_GPIO_Port GPIOB
+#define OldPitch_GPIO_IN_Pin GPIO_PIN_6
+#define OldPitch_GPIO_IN_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

@@ -73,19 +73,19 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     PC12     ------> UART5_TX
     PD2     ------> UART5_RX
     */
-    GPIO_InitStruct.Pin = pitch_TX_Pin;
+    GPIO_InitStruct.Pin = Pitch_UART_TX_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF8_UART5;
-    HAL_GPIO_Init(pitch_TX_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(Pitch_UART_TX_GPIO_Port, &GPIO_InitStruct);
 
-    GPIO_InitStruct.Pin = pitch_RX_Pin;
+    GPIO_InitStruct.Pin = Pitch_UART_RX_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF8_UART5;
-    HAL_GPIO_Init(pitch_RX_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(Pitch_UART_RX_GPIO_Port, &GPIO_InitStruct);
 
     /* UART5 interrupt Init */
     HAL_NVIC_SetPriority(UART5_IRQn, 8, 0);
@@ -111,9 +111,9 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
     PC12     ------> UART5_TX
     PD2     ------> UART5_RX
     */
-    HAL_GPIO_DeInit(pitch_TX_GPIO_Port, pitch_TX_Pin);
+    HAL_GPIO_DeInit(Pitch_UART_TX_GPIO_Port, Pitch_UART_TX_Pin);
 
-    HAL_GPIO_DeInit(pitch_RX_GPIO_Port, pitch_RX_Pin);
+    HAL_GPIO_DeInit(Pitch_UART_RX_GPIO_Port, Pitch_UART_RX_Pin);
 
     /* UART5 interrupt Deinit */
     HAL_NVIC_DisableIRQ(UART5_IRQn);

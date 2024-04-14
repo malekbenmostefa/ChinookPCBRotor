@@ -25,7 +25,7 @@ uint8_t rpm_pulse_count = 0;
 
 /**
  * @brief  Fonction qui est appelée en callback lorsqu'un pulse est détecté du capteur rpm
- * @param  None
+ * @param  uint16_t GPIO_Pin
  * @retval None
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
