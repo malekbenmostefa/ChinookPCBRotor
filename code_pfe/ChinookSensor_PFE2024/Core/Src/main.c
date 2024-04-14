@@ -26,7 +26,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "pitch.h"
+#include "rpm.h"
+#include "torque.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,8 +60,27 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+// Variables pour l'encodeur du pitch
+extern uint8_t checksum[1];
+
 extern uint8_t position_rx_buff[2];
-extern volatile uint8_t Rx_byte;
+extern uint8_t position_time_rx_buff[4];
+extern uint8_t position_time_status_rx_buff[5];
+
+extern uint8_t serial_number_rx_buff[5];
+extern uint8_t address_rx_buff[2];
+extern uint8_t factory_info_rx_buff[15];
+extern uint8_t resolution_rx_buff[3];
+extern uint8_t mode_rx_buff[3];
+
+// CAN bus variables
+CAN_RxHeaderTypeDef rxHeader; //CAN Bus Transmit Header
+CAN_TxHeaderTypeDef txHeader; //CAN Bus Receive Header
+uint8_t canRX[8] = {0,0,0,0,0,0,0,0};  //CAN Bus Receive Buffer
+CAN_FilterTypeDef canfil; //CAN Bus Filter
+uint32_t canMailbox; //CAN Bus Mail box variable
+
 /* USER CODE END 0 */
 
 /**
@@ -100,8 +121,34 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2); // Timer utilisé pour mesurer des intervalles de temps entre les pulse sur l'EXTI
   HAL_ADC_Start_IT(&hadc1); // ADC qui mesure le torque automatiquement à tous les 5 ms
 
+  pitch_Init(&huart5, ADDR_ENCODEUR);
   uint8_t request = SB_cmd(ADDR_ENCODEUR,REQUEST_POSITION);
-  HAL_UART_Receive_IT(&huart5,&Rx_byte,1);
+
+  canfil.FilterBank = 0;
+  canfil.FilterMode = CAN_FILTERMODE_IDMASK;
+  canfil.FilterFIFOAssignment = CAN_RX_FIFO0;
+  canfil.FilterIdHigh = 0;
+  canfil.FilterIdLow = 0;
+  canfil.FilterMaskIdHigh = 0;
+  canfil.FilterMaskIdLow = 0;
+  canfil.FilterScale = CAN_FILTERSCALE_32BIT;
+  canfil.FilterActivation = ENABLE;
+  canfil.SlaveStartFilterBank = 14;
+
+  txHeader.DLC = 8; // Number of bites to be transmitted max- 8
+  txHeader.IDE = CAN_ID_STD;
+  txHeader.RTR = CAN_RTR_DATA;
+  txHeader.StdId = 0x030;
+  txHeader.ExtId = 0x02;
+  txHeader.TransmitGlobalTime = DISABLE;
+
+  HAL_CAN_ConfigFilter(&hcan1,&canfil); //Initialize CAN Filter
+  HAL_CAN_Start(&hcan1); //Initialize CAN Bus
+  //HAL_CAN_ActivateNotification(&hcan,CAN_IT_RX_FIFO0_MSG_PENDING);// Initialize CAN Bus Rx Interrupt
+
+  uint8_t csend[] = {0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08}; // Tx Buffer
+
+  pitch_Init(&huart5, ADDR_ENCODEUR);
 
   /* USER CODE END 2 */
 
@@ -112,11 +159,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
 	  pitch_send_SB_cmd(&huart5, request);
+
 	  HAL_Delay(1000);
-	  if(position_rx_buff[1] == 13){
-		  HAL_Delay(1000);
-	  }
+	  //HAL_CAN_AddTxMessage(&hcan1,&txHeader,csend,&canMailbox); // Send Message
   }
   /* USER CODE END 3 */
 }

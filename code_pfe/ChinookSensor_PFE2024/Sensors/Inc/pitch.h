@@ -16,12 +16,14 @@
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_uart.h"
 
 /* Defines -------------------------------------------------------------------*/
 #define pitch_busy_line_Pin GPIO_PIN_4
 #define pitch_busy_line_GPIO_Port GPIOB
 
 #define ADDR_ENCODEUR 					0xF		// Adresse de l'encodeur (parle a tout les encodeurs de la ligne SEI)
+#define RECEIVE_TIMEOUT					5		// Timeout pour laisser le temps à la premier donnée d'arrivé sur le USART RX (msec)
 
 //SEI Request Commands
 #define REQUEST_POSITION 				0x1		// POSITION
@@ -95,10 +97,11 @@
 
 /**
  * @brief  Calcul la valeur du checksum attendue
- * @param  uint8_t data
+ * @param  uint8_t *data_tx
+ * @param  uint8_t *data_rx
  * @retval uint8_t
  */
-uint8_t calculate_checksum(uint8_t data);
+uint8_t calculate_checksum(uint8_t *data_tx, uint8_t taille_buffer_tx, uint8_t *data_rx, uint8_t taille_buffer_rx);
 
 /**
  * @brief  Genere une commande de 8 bits avec le format «single byte» de SEI
@@ -298,6 +301,6 @@ uint8_t pitch_change_baud_rate(UART_HandleTypeDef *huart, uint8_t addr, uint8_t 
  * @param  uint8_t addr
  * @retval uint8_t
  */
-uint8_t encodeur_Init(UART_HandleTypeDef *uart, uint8_t addr);
+void pitch_Init(UART_HandleTypeDef *uart, uint8_t addr);
 
 #endif
