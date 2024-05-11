@@ -1,0 +1,8 @@
+.metadata/
+code_chinook/
+code_pfe/ChinookSensor_PFE2024/.metadata
+code_pfe/ChinookSensor_PFE2024/.settings
+
+code_pfe/ChinookSensor_PFE2024/STM32F446RETX_FLASH.ld
+code_pfe/ChinookSensor_PFE2024/STM32F446RETX_RAM.ld
+*.o

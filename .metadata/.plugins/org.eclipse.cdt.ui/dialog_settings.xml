@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="completion_proposal_size">
+	</section>
+	<section name="org.eclipse.cdt.ui.text.hover.CMacroExpansionExploration">
+	</section>
+	<section name="org.eclipse.cdt.internal.ui.preferences.EditTemplateDialog_dialogBounds">
+		<item key="DIALOG_X_ORIGIN" value="6"/>
+		<item key="DIALOG_Y_ORIGIN" value="0"/>
+		<item key="DIALOG_WIDTH" value="780"/>
+		<item key="DIALOG_HEIGHT" value="485"/>
+		<item key="DIALOG_FONT_NAME" value="1|Segoe UI|9.0|0|WINDOWS|1|-15|0|0|0|400|0|0|0|1|0|0|0|0|Segoe UI"/>
+	</section>
+	<section name="org.eclipse.cdt.internal.corext.codemanipulation">
+		<section name=".c">
+			<item key="id" value="org.eclipse.cdt.ui.text.codetemplates.csourcefile"/>
+			<item key="name" value="Default C source template"/>
+			<item key="contextId" value="org.eclipse.cdt.core.cSource.contenttype_context"/>
+		</section>
+		<section name=".h">
+			<item key="id" value="org.eclipse.cdt.ui.text.codetemplates.cheaderfile"/>
+			<item key="name" value="Default C header template"/>
+			<item key="contextId" value="org.eclipse.cdt.core.cHeader.contenttype_context"/>
+		</section>
+	</section>
+	<section name="CResourceRenameRefactoringInputPage">
+		<item key="updateReferences" value="true"/>
+	</section>
+	<section name="org.eclipse.cdt.ui.text.hover.CMacroExpansionExploration.internal">
+		<item key="size.width" value="512"/>
+		<item key="size.height" value="180"/>
+	</section>
+</section>
