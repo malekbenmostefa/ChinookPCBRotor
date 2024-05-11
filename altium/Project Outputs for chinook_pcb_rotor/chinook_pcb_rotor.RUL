@@ -1,0 +1,6 @@
+DRC Rules Export File for PCB: C:\Users\thoma\OneDrive\ets\ele795\github\ChinookPCBRotor\altium\chinook_pcb_rotor.PcbDoc
+RuleKind=Clearance|RuleName=constraint|Scope=Board|Minimum=7.00
+RuleKind=SolderMaskExpansion|RuleName=SolderMaskExpansion|Scope=Board|Minimum=4.00
+RuleKind=Width|RuleName=Width|Scope=Board|Minimum=10.00
+RuleKind=Clearance|RuleName=Clearance|Scope=Board|Minimum=10.00
+RuleKind=ShortCircuit|RuleName=ShortCircuit|Scope=Board|Allowed=0
