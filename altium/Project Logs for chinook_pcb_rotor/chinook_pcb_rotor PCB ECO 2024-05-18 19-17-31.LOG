@@ -1,0 +1,3 @@
+Change Net Name : Old Net Name=NetJ9_2 New Net Name=CAPTEUR_RPM_DIG
+Change Net Name : Old Net Name=NetJ10_2 New Net Name=CAPTEUR_TORQUE_ANALOG
+Added Member To Class: ClassName=U_alimentation Member=Component R6 31.6kOhms

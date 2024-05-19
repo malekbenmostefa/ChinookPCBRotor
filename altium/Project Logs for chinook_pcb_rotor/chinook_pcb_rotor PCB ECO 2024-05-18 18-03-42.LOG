@@ -1,0 +1,13 @@
+Removed Pin From Net: NetName=NetR6_1 Pin=R6-2
+Removed Member From Class: ClassName=U_alimentation Member=L1
+Added Component: Designator=L?(IHLP2525EZER4R7M01)
+Add component (AddParameter): Name = "Built_By"; Value = "EMA_UL_Team"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "C"; Value = "Copyright (C) 2015 Accelerated Designs. All rights reserved"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Manufacturer_Part_Number"; Value = "SDR1307-5R6ML"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Supplier 1"; Value = "Mouser"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Supplier Part Number 1"; Value = "70-IHLP2525EZER4R7M0"; VariantName = "[No Variations]"
+Add component (AddParameter): Name = "Vendor"; Value = "Bourns Electronics"; VariantName = "[No Variations]"
+Added Pin To Net: NetName=12V Pin=L?-1
+Added Pin To Net: NetName=NetC27_1 Pin=L?-2
+Added Pin To Net: NetName=12V Pin=R6-2
+Added Member To Class: ClassName=U_alimentation Member=Component L? 4.7uH

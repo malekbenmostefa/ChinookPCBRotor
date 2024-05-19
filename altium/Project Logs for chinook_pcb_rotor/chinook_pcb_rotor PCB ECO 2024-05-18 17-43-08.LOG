@@ -1,0 +1,6 @@
+Removed Pin From Net: NetName=5V Pin=R6-1
+Add Pin To Net: Unknown Pin: Pin L1-1
+Add Pin To Net: Unknown Pin: Pin L1-2
+Added Pin To Net: NetName=NetR6_1 Pin=R6-1
+Change Net Name : Old Net Name=NetJ1_1 New Net Name=vcc2
+Change Net Name : Old Net Name=NetJ3_1 New Net Name=vcc
